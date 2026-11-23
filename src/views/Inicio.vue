@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed, onMounted, onUnmounted, watch } from 'vue'
+import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { 
   FlaskConical, 
@@ -18,9 +18,12 @@ import {
   Save,
   CheckCircle2,
   Building2,
-  Scale
+  Scale,
+  Lock,
+  AlertCircle
 } from 'lucide-vue-next'
 import { useRegistrosStore } from '../stores/registros'
+import BrandLogo from '../components/BrandLogo.vue'
 
 const router = useRouter()
 const store = useRegistrosStore()
@@ -68,8 +71,12 @@ const fecharPainel = () => {
 
 // Fechar modal flutuante com tecla Esc e travar scroll do fundo enquanto modal estiver aberto
 const handleKeyDown = (e) => {
-  if (e.key === 'Escape' && painelAberto.value) {
-    fecharPainel()
+  if (e.key === 'Escape') {
+    if (modalCrachaAberto.value) {
+      fecharModalCracha()
+    } else if (painelAberto.value) {
+      fecharPainel()
+    }
   }
 }
 
@@ -90,15 +97,161 @@ onUnmounted(() => {
   document.body.style.overflow = ''
 })
 
+// Helper para verificar se o campo tem valor preenchido (para aplicar cor de preenchido)
+const isCampoPreenchido = (valor) => {
+  if (valor === null || valor === undefined) return false
+  if (typeof valor === 'string') return valor.trim().length > 0
+  return String(valor).length > 0
+}
+
+// ----------------------------------------------------
+// Modal de Confirmação do Crachá do Operador (Solicitado ao clicar em Salvar)
+// ----------------------------------------------------
+const modalCrachaAberto = ref(false)
+const crachaTemp = ref('')
+const erroCracha = ref('')
+const operacaoPendente = ref(null) // 'abastecimento' | 'residuo'
+const inputCrachaRef = ref(null)
+
+const fecharModalCracha = () => {
+  modalCrachaAberto.value = false
+  crachaTemp.value = ''
+  erroCracha.value = ''
+}
+
+const solicitarCrachaAbastecimento = () => {
+  if (
+    !formAbast.value.data || 
+    !formAbast.value.marca || 
+    !formAbast.value.celula || 
+    !formAbast.value.produto || 
+    !formAbast.value.quantidade
+  ) {
+    return
+  }
+  operacaoPendente.value = 'abastecimento'
+  crachaTemp.value = ''
+  erroCracha.value = ''
+  modalCrachaAberto.value = true
+  nextTick(() => {
+    inputCrachaRef.value?.focus()
+  })
+}
+
+const solicitarCrachaResiduo = () => {
+  if (
+    !formResiduo.value.data || 
+    !formResiduo.value.marca || 
+    !formResiduo.value.celula || 
+    !formResiduo.value.produto || 
+    !formResiduo.value.quantidade
+  ) {
+    return
+  }
+  operacaoPendente.value = 'residuo'
+  crachaTemp.value = ''
+  erroCracha.value = ''
+  modalCrachaAberto.value = true
+  nextTick(() => {
+    inputCrachaRef.value?.focus()
+  })
+}
+
+const confirmarCrachaESalvar = () => {
+  const crachaLimpo = (crachaTemp.value || '').trim()
+  if (!crachaLimpo) {
+    erroCracha.value = 'Por favor, digite ou aproxime o crachá do operador para salvar.'
+    nextTick(() => inputCrachaRef.value?.focus())
+    return
+  }
+
+  if (operacaoPendente.value === 'abastecimento') {
+    const [ano, mes, dia] = formAbast.value.data.split('-')
+    const dataFormatada = `${dia}/${mes}/${ano}`
+    const horaAtual = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+    const qtdNum = Number(formAbast.value.quantidade)
+
+    store.adicionarRegistro({
+      tipo: 'Abastecimento',
+      dataHora: `${dataFormatada} ${horaAtual}`,
+      cracha: crachaLimpo,
+      marca: formAbast.value.marca,
+      celula: formAbast.value.celula.trim().toUpperCase(),
+      produto: formAbast.value.produto.trim(),
+      qtd: qtdNum,
+      valorUnitario: valorUnitarioAbast.value,
+      valorTotal: custoTotalAbastCalculado.value,
+      nome: `Crachá ${crachaLimpo}`
+    })
+
+    sucessoAbastecimento.value = true
+
+    // Ao salvar: limpa Produto Químico e Quantidade Abastecida, preservando Data, Marca e Célula
+    const marcaAtual = formAbast.value.marca
+    const celulaAtual = formAbast.value.celula
+    formAbast.value = {
+      data: formAbast.value.data || obterDataHojeIso(),
+      cracha: '',
+      marca: marcaAtual,
+      celula: celulaAtual,
+      produto: '',
+      quantidade: ''
+    }
+
+    setTimeout(() => {
+      sucessoAbastecimento.value = false
+    }, 4000)
+  } else if (operacaoPendente.value === 'residuo') {
+    const [ano, mes, dia] = formResiduo.value.data.split('-')
+    const dataFormatada = `${dia}/${mes}/${ano}`
+    const horaAtual = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
+    const qtdNum = Number(formResiduo.value.quantidade)
+
+    store.adicionarRegistro({
+      tipo: 'Resíduo',
+      dataHora: `${dataFormatada} ${horaAtual}`,
+      cracha: crachaLimpo,
+      marca: formResiduo.value.marca,
+      celula: formResiduo.value.celula.trim().toUpperCase(),
+      produto: formResiduo.value.produto.trim(),
+      qtd: qtdNum,
+      valorUnitario: valorUnitarioResiduo.value,
+      valorTotal: custoTotalResiduoCalculado.value,
+      nome: `Crachá ${crachaLimpo}`
+    })
+
+    sucessoResiduo.value = true
+
+    // Ao salvar: limpa Produto Químico e Quantidade, preservando Data, Marca e Célula
+    const marcaAtual = formResiduo.value.marca
+    const celulaAtual = formResiduo.value.celula
+    formResiduo.value = {
+      data: formResiduo.value.data || obterDataHojeIso(),
+      cracha: '',
+      marca: marcaAtual,
+      celula: celulaAtual,
+      produto: '',
+      quantidade: ''
+    }
+
+    setTimeout(() => {
+      sucessoResiduo.value = false
+    }, 4000)
+  }
+
+  fecharModalCracha()
+}
+
 // ----------------------------------------------------
 // Form Abastecimento
 // ----------------------------------------------------
+// Ao iniciar: apenas o campo de data vem preenchido; demais campos vazios
 const formAbast = ref({
   data: obterDataHojeIso(),
   cracha: '',
-  marca: store.marcas[0] || '',
+  marca: '',
   celula: '',
-  produto: store.produtos[0]?.nome || '',
+  produto: '',
   quantidade: ''
 })
 
@@ -116,63 +269,16 @@ const custoTotalAbastCalculado = computed(() => {
   return qtd * valorUnitarioAbast.value
 })
 
-const salvarAbastecimento = () => {
-  if (
-    !formAbast.value.data || 
-    !formAbast.value.cracha || 
-    !formAbast.value.marca || 
-    !formAbast.value.celula || 
-    !formAbast.value.produto || 
-    !formAbast.value.quantidade
-  ) {
-    return
-  }
-
-  const [ano, mes, dia] = formAbast.value.data.split('-')
-  const dataFormatada = `${dia}/${mes}/${ano}`
-  const horaAtual = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
-  const qtdNum = Number(formAbast.value.quantidade)
-
-  store.adicionarRegistro({
-    tipo: 'Abastecimento',
-    dataHora: `${dataFormatada} ${horaAtual}`,
-    cracha: formAbast.value.cracha.trim(),
-    marca: formAbast.value.marca,
-    celula: formAbast.value.celula.trim().toUpperCase(),
-    produto: formAbast.value.produto.trim(),
-    qtd: qtdNum,
-    valorUnitario: valorUnitarioAbast.value,
-    valorTotal: custoTotalAbastCalculado.value,
-    nome: `Crachá ${formAbast.value.cracha.trim()}`
-  })
-
-  sucessoAbastecimento.value = true
-
-  const marcaAtual = formAbast.value.marca
-  const prodAtual = formAbast.value.produto
-  formAbast.value = {
-    data: obterDataHojeIso(),
-    cracha: '',
-    marca: marcaAtual,
-    celula: '',
-    produto: prodAtual,
-    quantidade: ''
-  }
-
-  setTimeout(() => {
-    sucessoAbastecimento.value = false
-  }, 4000)
-}
-
 // ----------------------------------------------------
 // Form Resíduos
 // ----------------------------------------------------
+// Ao iniciar: apenas o campo de data vem preenchido; demais campos vazios
 const formResiduo = ref({
   data: obterDataHojeIso(),
   cracha: '',
-  marca: store.marcas[0] || '',
+  marca: '',
   celula: '',
-  produto: store.produtos[0]?.nome || '',
+  produto: '',
   quantidade: ''
 })
 
@@ -189,54 +295,6 @@ const custoTotalResiduoCalculado = computed(() => {
   const qtd = Number(formResiduo.value.quantidade || 0)
   return qtd * valorUnitarioResiduo.value
 })
-
-const salvarResiduo = () => {
-  if (
-    !formResiduo.value.data || 
-    !formResiduo.value.cracha || 
-    !formResiduo.value.marca || 
-    !formResiduo.value.celula || 
-    !formResiduo.value.produto || 
-    !formResiduo.value.quantidade
-  ) {
-    return
-  }
-
-  const [ano, mes, dia] = formResiduo.value.data.split('-')
-  const dataFormatada = `${dia}/${mes}/${ano}`
-  const horaAtual = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
-  const qtdNum = Number(formResiduo.value.quantidade)
-
-  store.adicionarRegistro({
-    tipo: 'Resíduo',
-    dataHora: `${dataFormatada} ${horaAtual}`,
-    cracha: formResiduo.value.cracha.trim(),
-    marca: formResiduo.value.marca,
-    celula: formResiduo.value.celula.trim().toUpperCase(),
-    produto: formResiduo.value.produto.trim(),
-    qtd: qtdNum,
-    valorUnitario: valorUnitarioResiduo.value,
-    valorTotal: custoTotalResiduoCalculado.value,
-    nome: `Crachá ${formResiduo.value.cracha.trim()}`
-  })
-
-  sucessoResiduo.value = true
-
-  const marcaAtual = formResiduo.value.marca
-  const prodAtual = formResiduo.value.produto
-  formResiduo.value = {
-    data: obterDataHojeIso(),
-    cracha: '',
-    marca: marcaAtual,
-    celula: '',
-    produto: prodAtual,
-    quantidade: ''
-  }
-
-  setTimeout(() => {
-    sucessoResiduo.value = false
-  }, 4000)
-}
 
 // ----------------------------------------------------
 // Métricas do Dia
@@ -286,6 +344,26 @@ const totaisPorMarcaHoje = computed(() => {
 const formatarMoeda = (valor) => {
   return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valor || 0)
 }
+
+const removerRegistroInicio = (id) => {
+  const item = store.registros.find(r => r.id === id)
+  const itemDesc = item 
+    ? `${item.tipo}: ${item.produto} • ${Number(item.qtd).toLocaleString('pt-BR')} Kg/L (${item.marca || item.celula})` 
+    : `Lançamento #${id}`
+
+  store.abrirConfirmacaoExclusao({
+    titulo: 'Excluir Movimentação de Hoje',
+    descricao: 'Tem certeza que deseja excluir esta movimentação? Os totais do dia e relatórios serão recalculados automaticamente.',
+    itemNome: itemDesc,
+    onConfirm: () => {
+      store.removerRegistro(id)
+      return {
+        titulo: 'Lançamento Removido!',
+        msg: 'A movimentação foi excluída com sucesso e o painel de hoje foi atualizado.'
+      }
+    }
+  })
+}
 </script>
 
 <template>
@@ -315,9 +393,12 @@ const formatarMoeda = (valor) => {
           class="btn-panel-trigger btn-trigger-abast"
           :class="{ 'btn-panel-active': painelAberto === 'abastecimento' }"
         >
-          <PlusCircle :size="18" />
+          <PlusCircle :size="15" :stroke-width="2.2" class="trigger-icon" />
           <span>Novo Abastecimento</span>
-          <span v-if="painelAberto === 'abastecimento'" class="trigger-status-badge">Aberto</span>
+          <span v-if="painelAberto === 'abastecimento'" class="trigger-status-badge">
+            <span class="badge-dot"></span>
+            Aberto
+          </span>
         </button>
 
         <button 
@@ -326,9 +407,12 @@ const formatarMoeda = (valor) => {
           class="btn-panel-trigger btn-trigger-residuo"
           :class="{ 'btn-panel-active': painelAberto === 'residuo' }"
         >
-          <Trash2 :size="18" />
+          <Trash2 :size="15" :stroke-width="2.2" class="trigger-icon" />
           <span>Resíduos</span>
-          <span v-if="painelAberto === 'residuo'" class="trigger-status-badge">Aberto</span>
+          <span v-if="painelAberto === 'residuo'" class="trigger-status-badge">
+            <span class="badge-dot"></span>
+            Aberto
+          </span>
         </button>
       </div>
     </div>
@@ -443,23 +527,25 @@ const formatarMoeda = (valor) => {
               </div>
             </div>
 
-            <form @submit.prevent="salvarAbastecimento" class="modern-form">
+            <form @submit.prevent="solicitarCrachaAbastecimento" class="modern-form">
               <!-- Linha 1: Data e Crachá -->
               <div class="form-grid">
                 <div class="input-group">
                   <label><Calendar :size="15" /> Data do Abastecimento</label>
-                  <input type="date" v-model="formAbast.data" class="modern-input" required />
+                  <input
+                    type="date"
+                    v-model="formAbast.data"
+                    :class="['modern-input', { 'input-filled': isCampoPreenchido(formAbast.data) }]"
+                    required
+                  />
                 </div>
 
                 <div class="input-group">
                   <label><IdCard :size="15" /> Crachá do Operador</label>
-                  <input
-                    type="text"
-                    v-model="formAbast.cracha"
-                    class="modern-input"
-                    placeholder="Digite o crachá (Ex: 58492)"
-                    required
-                  />
+                  <div class="cracha-lock-badge">
+                    <Lock :size="14" />
+                    <span>Solicitado ao clicar em Salvar</span>
+                  </div>
                 </div>
               </div>
 
@@ -467,21 +553,28 @@ const formatarMoeda = (valor) => {
               <div class="form-grid">
                 <div class="input-group">
                   <label><Tag :size="15" /> Marca</label>
-                  <select v-model="formAbast.marca" class="modern-input" required>
+                  <select
+                    v-model="formAbast.marca"
+                    :class="['modern-input', { 'input-filled': isCampoPreenchido(formAbast.marca) }]"
+                    required
+                  >
                     <option value="" disabled>Selecione a marca...</option>
+                    <option v-if="store.marcas.length === 0" value="" disabled>Nenhuma marca cadastrada (+ Cadastros)</option>
                     <option v-for="m in store.marcas" :key="m" :value="m">{{ m }}</option>
                   </select>
                 </div>
 
                 <div class="input-group">
                   <label><Building2 :size="15" /> Célula de Produção</label>
-                  <input
-                    type="text"
+                  <select
                     v-model="formAbast.celula"
-                    class="modern-input"
-                    placeholder="Ex: Célula 04, Montagem A..."
+                    :class="['modern-input', { 'input-filled': isCampoPreenchido(formAbast.celula) }]"
                     required
-                  />
+                  >
+                    <option value="" disabled>Selecione a célula...</option>
+                    <option v-if="store.celulas.length === 0" value="" disabled>Nenhuma célula cadastrada (+ Cadastros)</option>
+                    <option v-for="c in store.celulas" :key="c" :value="c">{{ c }}</option>
+                  </select>
                 </div>
               </div>
 
@@ -489,8 +582,13 @@ const formatarMoeda = (valor) => {
               <div class="form-grid">
                 <div class="input-group">
                   <label><FlaskConical :size="15" /> Produto Químico</label>
-                  <select v-model="formAbast.produto" class="modern-input" required>
+                  <select
+                    v-model="formAbast.produto"
+                    :class="['modern-input', { 'input-filled': isCampoPreenchido(formAbast.produto) }]"
+                    required
+                  >
                     <option value="" disabled>Selecione o produto químico...</option>
+                    <option v-if="store.produtos.length === 0" value="" disabled>Nenhum produto cadastrado (+ Cadastros)</option>
                     <option v-for="p in store.produtos" :key="p.id" :value="p.nome">{{ p.nome }}</option>
                   </select>
                 </div>
@@ -501,13 +599,13 @@ const formatarMoeda = (valor) => {
                     <input
                       type="number"
                       v-model="formAbast.quantidade"
-                      class="modern-input"
+                      :class="['modern-input', { 'input-filled': isCampoPreenchido(formAbast.quantidade) }]"
                       step="0.001"
                       placeholder="0.000"
                       min="0.001"
                       required
                     />
-                    <span class="suffix">Kg / L</span>
+                    <span class="suffix" :class="{ 'suffix-filled': isCampoPreenchido(formAbast.quantidade) }">Kg / L</span>
                   </div>
                 </div>
               </div>
@@ -550,23 +648,25 @@ const formatarMoeda = (valor) => {
               </div>
             </div>
 
-            <form @submit.prevent="salvarResiduo" class="modern-form">
+            <form @submit.prevent="solicitarCrachaResiduo" class="modern-form">
               <!-- Linha 1: Data e Crachá -->
               <div class="form-grid">
                 <div class="input-group">
                   <label><Calendar :size="15" /> Data do Resíduo</label>
-                  <input type="date" v-model="formResiduo.data" class="modern-input" required />
+                  <input
+                    type="date"
+                    v-model="formResiduo.data"
+                    :class="['modern-input', { 'input-filled': isCampoPreenchido(formResiduo.data) }]"
+                    required
+                  />
                 </div>
 
                 <div class="input-group">
                   <label><IdCard :size="15" /> Crachá</label>
-                  <input
-                    type="text"
-                    v-model="formResiduo.cracha"
-                    class="modern-input"
-                    placeholder="Digite o crachá (Ex: 48920)"
-                    required
-                  />
+                  <div class="cracha-lock-badge cracha-lock-amber">
+                    <Lock :size="14" />
+                    <span>Solicitado ao clicar em Salvar</span>
+                  </div>
                 </div>
               </div>
 
@@ -574,21 +674,28 @@ const formatarMoeda = (valor) => {
               <div class="form-grid">
                 <div class="input-group">
                   <label><Tag :size="15" /> Marca</label>
-                  <select v-model="formResiduo.marca" class="modern-input" required>
+                  <select
+                    v-model="formResiduo.marca"
+                    :class="['modern-input', { 'input-filled': isCampoPreenchido(formResiduo.marca) }]"
+                    required
+                  >
                     <option value="" disabled>Selecione a marca...</option>
+                    <option v-if="store.marcas.length === 0" value="" disabled>Nenhuma marca cadastrada (+ Cadastros)</option>
                     <option v-for="m in store.marcas" :key="m" :value="m">{{ m }}</option>
                   </select>
                 </div>
 
                 <div class="input-group">
                   <label><Building2 :size="15" /> Célula</label>
-                  <input
-                    type="text"
+                  <select
                     v-model="formResiduo.celula"
-                    class="modern-input"
-                    placeholder="Ex: Célula 04, Montagem A..."
+                    :class="['modern-input', { 'input-filled': isCampoPreenchido(formResiduo.celula) }]"
                     required
-                  />
+                  >
+                    <option value="" disabled>Selecione a célula...</option>
+                    <option v-if="store.celulas.length === 0" value="" disabled>Nenhuma célula cadastrada (+ Cadastros)</option>
+                    <option v-for="c in store.celulas" :key="c" :value="c">{{ c }}</option>
+                  </select>
                 </div>
               </div>
 
@@ -596,8 +703,13 @@ const formatarMoeda = (valor) => {
               <div class="form-grid">
                 <div class="input-group">
                   <label><FlaskConical :size="15" /> Produto</label>
-                  <select v-model="formResiduo.produto" class="modern-input" required>
+                  <select
+                    v-model="formResiduo.produto"
+                    :class="['modern-input', { 'input-filled': isCampoPreenchido(formResiduo.produto) }]"
+                    required
+                  >
                     <option value="" disabled>Selecione o produto químico...</option>
+                    <option v-if="store.produtos.length === 0" value="" disabled>Nenhum produto cadastrado (+ Cadastros)</option>
                     <option v-for="p in store.produtos" :key="p.id" :value="p.nome">{{ p.nome }}</option>
                   </select>
                 </div>
@@ -608,13 +720,13 @@ const formatarMoeda = (valor) => {
                     <input
                       type="number"
                       v-model="formResiduo.quantidade"
-                      class="modern-input"
+                      :class="['modern-input', { 'input-filled': isCampoPreenchido(formResiduo.quantidade) }]"
                       step="0.001"
                       placeholder="0.000"
                       min="0.001"
                       required
                     />
-                    <span class="suffix">Kg / L</span>
+                    <span class="suffix" :class="{ 'suffix-filled': isCampoPreenchido(formResiduo.quantidade) }">Kg / L</span>
                   </div>
                 </div>
               </div>
@@ -632,6 +744,95 @@ const formatarMoeda = (valor) => {
           </div>
         </div>
       </div>
+      </Transition>
+    </Teleport>
+
+    <!-- Modal Flutuante de Confirmação do Crachá do Operador (Solicitado ao Salvar) -->
+    <Teleport to="body">
+      <Transition name="fade">
+        <div 
+          v-if="modalCrachaAberto" 
+          class="floating-modal-backdrop cracha-modal-backdrop"
+          @click.self="fecharModalCracha"
+          aria-modal="true"
+          role="dialog"
+        >
+          <div class="cracha-modal-card">
+            <div class="cracha-modal-header">
+              <div class="cracha-modal-icon" :class="operacaoPendente === 'abastecimento' ? 'icon-circle-abast' : 'icon-circle-residuo'">
+                <IdCard :size="24" />
+              </div>
+              <div class="cracha-modal-titles">
+                <h3>Identificação do Operador</h3>
+                <p>Aproxime ou digite o crachá para confirmar e salvar o {{ operacaoPendente === 'abastecimento' ? 'abastecimento' : 'resíduo' }}</p>
+              </div>
+              <button type="button" @click="fecharModalCracha" class="btn-close-modal" title="Cancelar">
+                <X :size="20" />
+              </button>
+            </div>
+
+            <!-- Resumo da Operação -->
+            <div class="cracha-resumo-box" :class="operacaoPendente === 'abastecimento' ? 'resumo-abast' : 'resumo-residuo'">
+              <div class="resumo-linha">
+                <span class="resumo-label">Operação:</span>
+                <span class="resumo-val font-bold">
+                  {{ operacaoPendente === 'abastecimento' ? 'Abastecimento Químico' : 'Destinação de Resíduo' }}
+                </span>
+              </div>
+              <div class="resumo-linha">
+                <span class="resumo-label">Produto:</span>
+                <span class="resumo-val font-bold">
+                  {{ operacaoPendente === 'abastecimento' ? formAbast.produto : formResiduo.produto }}
+                </span>
+              </div>
+              <div class="resumo-linha">
+                <span class="resumo-label">Quantidade:</span>
+                <span class="resumo-val font-bold text-primary">
+                  {{ operacaoPendente === 'abastecimento' ? formAbast.quantidade : formResiduo.quantidade }} Kg / L
+                </span>
+              </div>
+              <div class="resumo-linha">
+                <span class="resumo-label">Célula / Marca:</span>
+                <span class="resumo-val text-muted">
+                  {{ operacaoPendente === 'abastecimento' ? formAbast.celula : formResiduo.celula }} • 
+                  {{ operacaoPendente === 'abastecimento' ? formAbast.marca : formResiduo.marca }}
+                </span>
+              </div>
+            </div>
+
+            <!-- Formulário de Leitura / Digitação do Crachá -->
+            <form @submit.prevent="confirmarCrachaESalvar" class="cracha-form">
+              <div class="input-group">
+                <label class="label-cracha"><IdCard :size="16" /> Crachá do Operador *</label>
+                <input
+                  ref="inputCrachaRef"
+                  type="text"
+                  v-model="crachaTemp"
+                  class="modern-input input-cracha-destaque"
+                  :class="{ 'input-filled': isCampoPreenchido(crachaTemp) }"
+                  placeholder="Digite ou aproxime o crachá..."
+                  required
+                  autofocus
+                />
+                <span class="field-hint-cracha">Pressione <strong>Enter</strong> ou clique em Confirmar para salvar</span>
+              </div>
+
+              <div v-if="erroCracha" class="alert-danger alert-cracha">
+                <AlertCircle :size="16" />
+                <span>{{ erroCracha }}</span>
+              </div>
+
+              <div class="cracha-modal-actions">
+                <button type="button" @click="fecharModalCracha" class="btn-secondary">
+                  Cancelar
+                </button>
+                <button type="submit" class="btn-primary" :class="{ 'btn-amber': operacaoPendente === 'residuo' }">
+                  <CheckCircle2 :size="18" /> Confirmar e Salvar
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
       </Transition>
     </Teleport>
 
@@ -720,7 +921,7 @@ const formatarMoeda = (valor) => {
         <span class="section-subtitle">Distribuição do volume abastecido nas linhas no dia de hoje ({{ dataHoje }})</span>
       </div>
 
-      <div class="brands-grid">
+      <div v-if="store.marcas && store.marcas.length > 0" class="brands-grid">
         <div 
           v-for="m in store.marcas" 
           :key="m" 
@@ -729,7 +930,9 @@ const formatarMoeda = (valor) => {
         >
           <div class="brand-stat-header">
             <span class="brand-pill-name">{{ m }}</span>
-            <Tag :size="16" class="brand-icon-tag" />
+            <div class="brand-corner-logo" :title="`Logo ${m}`">
+              <BrandLogo :marca="m" />
+            </div>
           </div>
           <div class="brand-stat-val">
             {{ (totaisPorMarcaHoje[m] || 0).toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 3 }) }}
@@ -737,6 +940,9 @@ const formatarMoeda = (valor) => {
           </div>
           <span class="brand-stat-footer">Consumido hoje</span>
         </div>
+      </div>
+      <div v-else class="brands-empty-alert">
+        <span>Nenhuma marca cadastrada. Acesse <strong>Cadastros</strong> para adicionar marcas.</span>
       </div>
     </div>
 
@@ -773,6 +979,7 @@ const formatarMoeda = (valor) => {
               <th>Crachá</th>
               <th class="text-right">Quantidade</th>
               <th class="text-right">Valor Estimado</th>
+              <th class="text-center" style="width: 60px;">Ação</th>
             </tr>
           </thead>
           <tbody>
@@ -810,6 +1017,16 @@ const formatarMoeda = (valor) => {
               </td>
               <td class="text-right font-bold" :class="item.valorTotal > 0 ? 'text-primary' : 'text-muted'">
                 {{ item.valorTotal > 0 ? formatarMoeda(item.valorTotal) : '—' }}
+              </td>
+              <td class="text-center">
+                <button 
+                  type="button"
+                  @click="removerRegistroInicio(item.id)" 
+                  class="btn-icon-danger" 
+                  title="Excluir este lançamento"
+                >
+                  <Trash2 :size="15" />
+                </button>
               </td>
             </tr>
           </tbody>
@@ -878,56 +1095,130 @@ const formatarMoeda = (valor) => {
 
 /* Botões Gatilho para os Painéis */
 .btn-panel-trigger {
-  padding: 12px 20px;
-  border-radius: var(--radius-md);
-  font-size: 0.95rem;
-  font-weight: 600;
+  padding: 8.5px 16px;
+  border-radius: 10px;
+  font-size: 0.84rem;
+  font-weight: 550;
+  letter-spacing: -0.01em;
   cursor: pointer;
   display: inline-flex;
   align-items: center;
-  gap: 10px;
-  transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
-  border: none;
+  gap: 7.5px;
+  transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  outline: none;
+  user-select: none;
+  line-height: 1.35;
 }
 
 .btn-trigger-abast {
-  background: var(--primary-gradient);
-  color: white;
-  box-shadow: 0 4px 14px -2px rgba(79, 70, 229, 0.4);
+  background: linear-gradient(180deg, #6366f1 0%, #4f46e5 100%);
+  color: #ffffff;
+  box-shadow: 
+    inset 0 1px 0 rgba(255, 255, 255, 0.25),
+    0 1px 2px rgba(15, 23, 42, 0.08),
+    0 4px 12px -2px rgba(79, 70, 229, 0.25);
 }
 
 .btn-trigger-abast:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 20px -2px rgba(79, 70, 229, 0.5);
-  filter: brightness(1.05);
+  transform: translateY(-1px);
+  box-shadow: 
+    inset 0 1px 0 rgba(255, 255, 255, 0.35),
+    0 3px 6px rgba(15, 23, 42, 0.08),
+    0 8px 18px -2px rgba(79, 70, 229, 0.38);
+  filter: brightness(1.03);
+}
+
+.btn-trigger-abast:active {
+  transform: translateY(0px) scale(0.985);
+  box-shadow: 
+    inset 0 1px 2px rgba(0, 0, 0, 0.18),
+    0 1px 3px rgba(79, 70, 229, 0.2);
 }
 
 .btn-trigger-residuo {
-  background: linear-gradient(135deg, #f59e0b 0%, #d97706 100%);
-  color: white;
-  box-shadow: 0 4px 14px -2px rgba(217, 119, 6, 0.35);
+  background: linear-gradient(180deg, #f59e0b 0%, #d97706 100%);
+  color: #ffffff;
+  box-shadow: 
+    inset 0 1px 0 rgba(255, 255, 255, 0.28),
+    0 1px 2px rgba(15, 23, 42, 0.08),
+    0 4px 12px -2px rgba(217, 119, 6, 0.25);
 }
 
 .btn-trigger-residuo:hover {
-  transform: translateY(-2px);
-  box-shadow: 0 8px 20px -2px rgba(217, 119, 6, 0.45);
-  filter: brightness(1.05);
+  transform: translateY(-1px);
+  box-shadow: 
+    inset 0 1px 0 rgba(255, 255, 255, 0.38),
+    0 3px 6px rgba(15, 23, 42, 0.08),
+    0 8px 18px -2px rgba(217, 119, 6, 0.38);
+  filter: brightness(1.03);
 }
 
-.btn-panel-active {
-  ring: 3px solid rgba(255, 255, 255, 0.7);
-  box-shadow: 0 0 0 3px rgba(15, 23, 42, 0.15), 0 8px 22px rgba(0, 0, 0, 0.2) !important;
-  transform: translateY(-2px);
+.btn-trigger-residuo:active {
+  transform: translateY(0px) scale(0.985);
+  box-shadow: 
+    inset 0 1px 2px rgba(0, 0, 0, 0.18),
+    0 1px 3px rgba(217, 119, 6, 0.2);
+}
+
+.btn-trigger-abast.btn-panel-active {
+  box-shadow: 
+    inset 0 1px 0 rgba(255, 255, 255, 0.25),
+    0 0 0 2px var(--bg-color),
+    0 0 0 4px #4f46e5,
+    0 6px 16px rgba(79, 70, 229, 0.35) !important;
+  transform: translateY(-1px);
+}
+
+.btn-trigger-residuo.btn-panel-active {
+  box-shadow: 
+    inset 0 1px 0 rgba(255, 255, 255, 0.25),
+    0 0 0 2px var(--bg-color),
+    0 0 0 4px #d97706,
+    0 6px 16px rgba(217, 119, 6, 0.35) !important;
+  transform: translateY(-1px);
+}
+
+.trigger-icon {
+  flex-shrink: 0;
+  opacity: 0.95;
 }
 
 .trigger-status-badge {
-  font-size: 0.68rem;
-  background: rgba(255, 255, 255, 0.28);
-  padding: 2px 7px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4.5px;
+  font-size: 0.65rem;
+  font-weight: 600;
+  padding: 1.5px 7px;
   border-radius: 9999px;
-  font-weight: 700;
+  background: rgba(255, 255, 255, 0.22);
+  border: 1px solid rgba(255, 255, 255, 0.32);
+  backdrop-filter: blur(4px);
   text-transform: uppercase;
-  letter-spacing: 0.5px;
+  letter-spacing: 0.03em;
+  line-height: 1.2;
+  margin-left: 2px;
+}
+
+.badge-dot {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #ffffff;
+  box-shadow: 0 0 6px rgba(255, 255, 255, 0.9);
+  animation: pulse-badge-dot 1.8s infinite ease-in-out;
+}
+
+@keyframes pulse-badge-dot {
+  0%, 100% {
+    opacity: 0.7;
+    transform: scale(0.9);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1.15);
+  }
 }
 
 /* ====================================================
@@ -1278,18 +1569,32 @@ const formatarMoeda = (valor) => {
   transform: translateY(0) scale(1);
 }
 
-/* Grid de Estatísticas Principais */
+/* Grid de Estatísticas Principais (Cards mais largos) */
 .stats-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
-  gap: 20px;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 22px;
+}
+
+@media (max-width: 1300px) {
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 680px) {
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .stat-card {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  gap: 20px;
+  gap: 22px;
+  padding: 24px 28px;
+  min-height: 165px;
   border-radius: var(--radius-lg);
   position: relative;
   overflow: hidden;
@@ -1402,18 +1707,36 @@ const formatarMoeda = (valor) => {
 
 .brands-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 18px;
 }
 
 .brand-stat-card {
-  padding: 18px 20px;
+  padding: 20px 24px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
   border-radius: var(--radius-md);
   border-top: 4px solid var(--primary);
   transition: all 0.2s ease;
+}
+
+.btn-icon-danger {
+  background: transparent;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 6px;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s ease;
+}
+
+.btn-icon-danger:hover {
+  background: #fee2e2;
+  color: #dc2626;
 }
 
 .brand-stat-card:hover {
@@ -1424,6 +1747,28 @@ const formatarMoeda = (valor) => {
   display: flex;
   align-items: center;
   justify-content: space-between;
+  gap: 8px;
+}
+
+.brand-corner-logo {
+  display: flex;
+  align-items: center;
+  justify-content: flex-end;
+  min-width: 40px;
+  height: 28px;
+  background: transparent;
+  border: none;
+  box-shadow: none;
+}
+
+.brands-empty-alert {
+  padding: 24px;
+  background: #f8fafc;
+  border: 1px dashed #cbd5e1;
+  border-radius: 8px;
+  text-align: center;
+  color: #64748b;
+  font-size: 0.9rem;
 }
 
 .brand-pill-name {
@@ -1670,5 +2015,193 @@ const formatarMoeda = (valor) => {
 
 .mt-3 {
   margin-top: 14px;
+}
+
+/* Crachá Placeholder Bloqueado no Formulário */
+.cracha-lock-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  background-color: #f8fafc;
+  border: 1.5px dashed #cbd5e1;
+  border-radius: var(--radius-md);
+  color: #64748b;
+  font-size: 0.86rem;
+  font-weight: 600;
+  cursor: default;
+  user-select: none;
+}
+
+.cracha-lock-badge.cracha-lock-amber {
+  background-color: #fffbeb;
+  border-color: #fde68a;
+  color: #b45309;
+}
+
+/* Modal de Confirmação do Crachá */
+.cracha-modal-backdrop {
+  z-index: 100000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(15, 23, 42, 0.7);
+  backdrop-filter: blur(4px);
+}
+
+.cracha-modal-card {
+  background: white;
+  border-radius: var(--radius-lg);
+  width: 100%;
+  max-width: 490px;
+  padding: 28px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.4);
+  border: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  animation: zoomInModal 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+@keyframes zoomInModal {
+  from {
+    opacity: 0;
+    transform: scale(0.96) translateY(10px);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1) translateY(0);
+  }
+}
+
+.cracha-modal-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  position: relative;
+}
+
+.cracha-modal-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.cracha-modal-titles h3 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text-main);
+  letter-spacing: -0.3px;
+}
+
+.cracha-modal-titles p {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-top: 2px;
+  line-height: 1.4;
+}
+
+.btn-close-modal {
+  margin-left: auto;
+  background: none;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 6px;
+  transition: all 0.2s;
+}
+
+.btn-close-modal:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.cracha-resumo-box {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cracha-resumo-box.resumo-abast {
+  border-left: 4px solid #4f46e5;
+  background: #f8faff;
+}
+
+.cracha-resumo-box.resumo-residuo {
+  border-left: 4px solid #d97706;
+  background: #fffdfa;
+}
+
+.resumo-linha {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.88rem;
+}
+
+.resumo-label {
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.resumo-val {
+  color: var(--text-main);
+}
+
+.cracha-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.label-cracha {
+  font-weight: 700 !important;
+  color: var(--text-main) !important;
+}
+
+.input-cracha-destaque {
+  font-size: 1.15rem !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.8px;
+  padding: 14px 18px !important;
+  text-align: center;
+  border-width: 2px !important;
+}
+
+.field-hint-cracha {
+  display: block;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  text-align: center;
+  margin-top: 4px;
+}
+
+.alert-cracha {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #b91c1c;
+}
+
+.cracha-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 8px;
 }
 </style>

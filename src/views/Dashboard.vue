@@ -257,15 +257,29 @@ const formatarMoeda = (valor) => {
 /* Grid de Estatísticas Principais */
 .stats-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
-  gap: 20px;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 22px;
+}
+
+@media (max-width: 1300px) {
+  .stats-grid {
+    grid-template-columns: repeat(2, 1fr);
+  }
+}
+
+@media (max-width: 680px) {
+  .stats-grid {
+    grid-template-columns: 1fr;
+  }
 }
 
 .stat-card {
   display: flex;
   flex-direction: column;
   justify-content: space-between;
-  gap: 20px;
+  gap: 22px;
+  padding: 24px 28px;
+  min-height: 165px;
   border-radius: var(--radius-lg);
   position: relative;
   overflow: hidden;
@@ -378,15 +392,15 @@ const formatarMoeda = (valor) => {
 
 .brands-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
-  gap: 16px;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 18px;
 }
 
 .brand-stat-card {
-  padding: 18px 20px;
+  padding: 20px 24px;
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 12px;
   border-radius: var(--radius-md);
   border-top: 4px solid var(--primary);
   transition: all 0.2s ease;

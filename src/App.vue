@@ -1,5 +1,73 @@
 <script setup>
-import { LayoutDashboard, BarChart2, FlaskConical, ListFilter, ShieldCheck, Database } from 'lucide-vue-next'
+import { ref, nextTick } from 'vue'
+import { 
+  LayoutDashboard, 
+  BarChart2, 
+  FlaskConical, 
+  ListFilter, 
+  ShieldCheck, 
+  Database,
+  UserCheck,
+  Lock,
+  LogOut,
+  Crown,
+  KeyRound,
+  X,
+  AlertCircle,
+  IdCard
+} from 'lucide-vue-next'
+import ModalConfirmarExclusao from './components/ModalConfirmarExclusao.vue'
+import { useRegistrosStore } from './stores/registros'
+
+const store = useRegistrosStore()
+
+const modalLoginAberto = ref(false)
+const crachaLogin = ref('')
+const erroLogin = ref('')
+const inputLoginRef = ref(null)
+
+const abrirModalLoginAdmin = () => {
+  crachaLogin.value = ''
+  erroLogin.value = ''
+  modalLoginAberto.value = true
+  nextTick(() => {
+    inputLoginRef.value?.focus()
+  })
+}
+
+const fecharModalLogin = () => {
+  modalLoginAberto.value = false
+  crachaLogin.value = ''
+  erroLogin.value = ''
+}
+
+const executarLoginAdmin = () => {
+  if (!crachaLogin.value.trim()) {
+    erroLogin.value = 'Informe o número do crachá do administrador.'
+    return
+  }
+
+  const res = store.loginAdmin(crachaLogin.value)
+  if (res.ok) {
+    fecharModalLogin()
+    store.mostrarNotificacaoCentro({
+      tipo: 'sucesso',
+      titulo: 'Modo Administrador Ativo!',
+      mensagem: `Bem-vindo, ${res.usuario.nome}! Permissões de edição e exclusão liberadas.`
+    })
+  } else {
+    erroLogin.value = res.msg || 'Crachá não autorizado como administrador.'
+  }
+}
+
+const fazerLogout = () => {
+  store.logoutAdmin()
+  store.mostrarNotificacaoCentro({
+    tipo: 'sucesso',
+    titulo: 'Sessão Encerrada',
+    mensagem: 'Você saiu do modo administrador com sucesso.'
+  })
+}
 </script>
 
 <template>
@@ -32,7 +100,7 @@ import { LayoutDashboard, BarChart2, FlaskConical, ListFilter, ShieldCheck, Data
             <span>Registros</span>
           </div>
         </router-link>
-        <router-link to="/cadastros">
+        <router-link v-if="store.isAdmin" to="/cadastros">
           <div class="link-content">
             <Database :size="19" />
             <span>Cadastro</span>
@@ -45,15 +113,43 @@ import { LayoutDashboard, BarChart2, FlaskConical, ListFilter, ShieldCheck, Data
             <span class="badge-dev-pill">Em breve</span>
           </div>
         </router-link>
+
+        <!-- Opção que aparece debaixo do dashboard quando entra com admin -->
+        <router-link v-if="store.isAdmin" to="/usuarios" class="link-admin">
+          <div class="link-content">
+            <UserCheck :size="19" />
+            <span>Gestão de Acessos</span>
+            <span class="badge-admin-pill">Admin</span>
+          </div>
+        </router-link>
       </nav>
 
       <div class="sidebar-footer">
-        <div class="system-status">
+        <!-- Modo Padrão (Sem Admin) -->
+        <div v-if="!store.isAdmin" class="system-status">
           <div class="status-indicator">
-            <span class="pulse-dot"></span>
+            <span class="status-dot"></span>
             <span class="status-text">Setor Químico Ativo</span>
           </div>
           <p class="status-sub"><ShieldCheck :size="14" /> Marcas & Insumos Integrados</p>
+          <button type="button" @click="abrirModalLoginAdmin" class="btn-sidebar-admin">
+            <Lock :size="13" /> Login
+          </button>
+        </div>
+
+        <!-- Modo Administrador Ativo (Simples e Direto) -->
+        <div v-else class="system-status system-status-admin">
+          <div class="admin-status-head">
+            <span class="admin-role-badge">
+              <ShieldCheck :size="13" />
+              {{ store.usuarioAdminLogado?.isMaster ? 'Master' : 'Admin' }}
+            </span>
+            <span class="admin-cracha-tag">Crachá: {{ store.usuarioAdminLogado?.cracha }}</span>
+          </div>
+          <p class="admin-user-name">{{ store.usuarioAdminLogado?.nome }}</p>
+          <button type="button" @click="fazerLogout" class="btn-sidebar-logout">
+            <LogOut :size="13" /> Sair do Modo Admin
+          </button>
         </div>
       </div>
     </aside>
@@ -63,6 +159,64 @@ import { LayoutDashboard, BarChart2, FlaskConical, ListFilter, ShieldCheck, Data
         <router-view></router-view>
       </div>
     </main>
+
+    <!-- Modal Central de Exclusão Direta e Notificação Central -->
+    <ModalConfirmarExclusao />
+
+    <!-- Modal de Login -->
+    <Teleport to="body">
+      <Transition name="fade">
+        <div 
+          v-if="modalLoginAberto" 
+          class="admin-modal-backdrop"
+          @click.self="fecharModalLogin"
+        >
+          <div class="admin-modal-card">
+            <div class="admin-modal-header">
+              <div class="admin-modal-icon">
+                <Lock :size="20" />
+              </div>
+              <div class="admin-modal-titles">
+                <h3>Login</h3>
+                <p>Identifique-se com o crachá de administrador para liberar edição e exclusão</p>
+              </div>
+              <button type="button" @click="fecharModalLogin" class="btn-close-modal" title="Fechar">
+                <X :size="20" />
+              </button>
+            </div>
+
+            <form @submit.prevent="executarLoginAdmin" class="admin-login-form">
+              <div class="input-group">
+                <label><IdCard :size="15" /> Crachá de Acesso</label>
+                <input
+                  ref="inputLoginRef"
+                  type="text"
+                  v-model="crachaLogin"
+                  class="modern-input input-admin-cracha"
+                  placeholder="Digite o crachá..."
+                  required
+                  autofocus
+                />
+              </div>
+
+              <div v-if="erroLogin" class="alert-danger alert-login">
+                <AlertCircle :size="16" />
+                <span>{{ erroLogin }}</span>
+              </div>
+
+              <div class="admin-modal-actions">
+                <button type="button" @click="fecharModalLogin" class="btn-secondary">
+                  Cancelar
+                </button>
+                <button type="submit" class="btn-primary btn-admin-enter">
+                  <KeyRound :size="17" /> Login
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
   </div>
 </template>
 
@@ -103,8 +257,8 @@ import { LayoutDashboard, BarChart2, FlaskConical, ListFilter, ShieldCheck, Data
   --shadow-md: 0 4px 6px -1px rgba(15, 23, 42, 0.08), 0 2px 4px -2px rgba(15, 23, 42, 0.04);
   --shadow-lg: 0 10px 25px -5px rgba(15, 23, 42, 0.08), 0 8px 10px -6px rgba(15, 23, 42, 0.04);
 
-  /* Layout Global & Container das Páginas */
-  --page-max-width: 1360px;
+  /* Layout Global & Container das Páginas (Expandido para maior largura) */
+  --page-max-width: 1680px;
   --page-padding-y: 2.25rem;
   --page-padding-x: 2rem;
 }
@@ -288,19 +442,12 @@ body {
   color: #e2e8f0;
 }
 
-.pulse-dot {
+.status-dot {
   width: 8px;
   height: 8px;
   background-color: var(--accent-emerald);
   border-radius: 50%;
-  box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7);
-  animation: pulse 2s infinite;
-}
-
-@keyframes pulse {
-  0% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0.7); }
-  70% { transform: scale(1); box-shadow: 0 0 0 6px rgba(16, 185, 129, 0); }
-  100% { transform: scale(0.95); box-shadow: 0 0 0 0 rgba(16, 185, 129, 0); }
+  flex-shrink: 0;
 }
 
 .status-sub {
@@ -407,6 +554,26 @@ body {
   box-shadow: 0 0 0 4px var(--primary-glow);
 }
 
+/* Campo preenchido com cor e destaque visual */
+.modern-input.input-filled {
+  background-color: #ecfdf5;
+  border-color: #10b981;
+  color: #064e3b;
+  font-weight: 600;
+  box-shadow: 0 1px 3px rgba(16, 185, 129, 0.1);
+}
+
+.modern-input.input-filled:focus {
+  border-color: #059669;
+  background-color: #ffffff;
+  box-shadow: 0 0 0 4px rgba(16, 185, 129, 0.25);
+}
+
+.suffix.suffix-filled {
+  color: #059669 !important;
+  font-weight: 700;
+}
+
 /* Botões Modernos Globais */
 .btn-primary {
   background: var(--primary-gradient);
@@ -497,5 +664,232 @@ body {
 @keyframes slideDown {
   from { opacity: 0; transform: translateY(-8px); }
   to { opacity: 1; transform: translateY(0); }
+}
+
+/* ---------------------------------------------------- */
+/* Estilos do Modo Administrador e Gestão de Acessos    */
+/* ---------------------------------------------------- */
+.badge-admin-pill {
+  margin-left: auto;
+  font-size: 0.7rem;
+  background: rgba(16, 185, 129, 0.2);
+  color: #34d399;
+  border: 1px solid rgba(16, 185, 129, 0.35);
+  padding: 2px 7px;
+  border-radius: 9999px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+}
+
+.btn-sidebar-admin {
+  background: rgba(99, 102, 241, 0.18);
+  border: 1px solid rgba(129, 140, 248, 0.35);
+  color: #c7d2fe;
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 0.76rem;
+  font-weight: 700;
+  width: 100%;
+  margin-top: 10px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: all 0.2s;
+}
+
+.btn-sidebar-admin:hover {
+  background: rgba(99, 102, 241, 0.3);
+  color: #ffffff;
+  border-color: rgba(129, 140, 248, 0.6);
+}
+
+.system-status-admin {
+  background: var(--sidebar-surface);
+  border: 1px solid var(--sidebar-border);
+}
+
+.admin-status-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  margin-bottom: 6px;
+}
+
+.admin-role-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  color: #38bdf8;
+  background: rgba(56, 189, 248, 0.1);
+  border: 1px solid rgba(56, 189, 248, 0.25);
+  padding: 2px 7px;
+  border-radius: 4px;
+}
+
+.admin-cracha-tag {
+  font-size: 0.72rem;
+  color: #94a3b8;
+}
+
+.admin-user-name {
+  color: #f1f5f9;
+  font-weight: 600;
+  font-size: 0.85rem;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  margin: 0 0 10px 0;
+}
+
+.btn-sidebar-logout {
+  background: #1e293b;
+  border: 1px solid #475569;
+  color: #cbd5e1;
+  border-radius: 6px;
+  padding: 6px 10px;
+  font-size: 0.75rem;
+  font-weight: 500;
+  width: 100%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  transition: all 0.2s;
+}
+
+.btn-sidebar-logout:hover {
+  background: rgba(239, 68, 68, 0.15);
+  border-color: rgba(239, 68, 68, 0.4);
+  color: #fca5a5;
+}
+
+/* Modal de Login Admin */
+.admin-modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 100000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(15, 23, 42, 0.75);
+  backdrop-filter: blur(5px);
+}
+
+.admin-modal-card {
+  background: white;
+  border-radius: var(--radius-lg);
+  width: 100%;
+  max-width: 480px;
+  padding: 28px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.4);
+  border: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  animation: zoomInModal 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.admin-modal-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.admin-modal-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: #f1f5f9;
+  color: var(--primary);
+  border: 1px solid var(--border);
+}
+
+.admin-modal-titles h3 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text-main);
+  letter-spacing: -0.3px;
+}
+
+.admin-modal-titles p {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-top: 2px;
+  line-height: 1.4;
+}
+
+.master-hint-box {
+  background: #f8faff;
+  border: 1px solid #c7d2fe;
+  border-left: 4px solid #4f46e5;
+  border-radius: var(--radius-md);
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 0.85rem;
+}
+
+.master-hint-box .hint-title {
+  color: #4f46e5;
+  font-weight: 700;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.master-hint-box .hint-val {
+  color: #334155;
+}
+
+.admin-login-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.input-admin-cracha {
+  font-size: 1.15rem !important;
+  font-weight: 700 !important;
+  text-align: center;
+  letter-spacing: 1px;
+}
+
+.alert-login {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #b91c1c;
+}
+
+.admin-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 8px;
+}
+
+.btn-admin-enter {
+  background: var(--primary) !important;
+  box-shadow: none !important;
 }
 </style>

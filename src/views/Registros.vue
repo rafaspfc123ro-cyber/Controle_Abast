@@ -3,17 +3,120 @@ import { ref, computed } from 'vue'
 import { 
   RotateCcw, 
   Trash2, 
+  Pencil,
   Calendar, 
   Download, 
   FlaskConical, 
   Recycle, 
   Filter, 
   IdCard, 
-  Building2 
+  Building2,
+  X,
+  Save,
+  CheckCircle2,
+  AlertCircle,
+  Tag,
+  Scale
 } from 'lucide-vue-next'
 import { useRegistrosStore } from '../stores/registros'
 
 const store = useRegistrosStore()
+
+// ----------------------------------------------------
+// Estado do Modal de Edição de Lançamento (Apenas Admin)
+// ----------------------------------------------------
+const modalEdicaoAberto = ref(false)
+const itemEditando = ref(null)
+const formEdicao = ref({
+  id: null,
+  tipo: '',
+  data: '',
+  hora: '',
+  marca: '',
+  celula: '',
+  produto: '',
+  qtd: 0,
+  cracha: ''
+})
+const erroEdicao = ref('')
+
+const abrirModalEdicao = (item) => {
+  itemEditando.value = item
+  const [dataPart, horaPart] = (item.dataHora || '').split(' ')
+  let dataIso = ''
+  if (dataPart && dataPart.includes('/')) {
+    const [d, m, y] = dataPart.split('/')
+    dataIso = `${y}-${m.padStart(2, '0')}-${d.padStart(2, '0')}`
+  }
+
+  formEdicao.value = {
+    id: item.id,
+    tipo: item.tipo,
+    data: dataIso,
+    hora: horaPart || '08:00',
+    marca: item.marca || store.marcas[0] || '',
+    celula: item.celula || store.celulas[0] || '',
+    produto: item.produto || store.produtos[0]?.nome || '',
+    qtd: item.qtd || 0,
+    cracha: item.cracha || (item.nome && item.nome.replace('Crachá', '').trim()) || ''
+  }
+  erroEdicao.value = ''
+  modalEdicaoAberto.value = true
+}
+
+const fecharModalEdicao = () => {
+  modalEdicaoAberto.value = false
+  itemEditando.value = null
+  erroEdicao.value = ''
+}
+
+const salvarEdicao = () => {
+  if (
+    !formEdicao.value.data || 
+    !formEdicao.value.marca || 
+    !formEdicao.value.celula || 
+    !formEdicao.value.produto || 
+    !formEdicao.value.qtd || 
+    !formEdicao.value.cracha
+  ) {
+    erroEdicao.value = 'Por favor, preencha todos os campos para salvar a alteração.'
+    return
+  }
+
+  const [y, m, d] = formEdicao.value.data.split('-')
+  const dataFormatada = `${d}/${m}/${y}`
+  const dataHoraFinal = `${dataFormatada} ${formEdicao.value.hora}`
+
+  // Localiza preço unitário do produto para recalcular o custo se for abastecimento
+  const prodObj = store.produtos.find(p => p.nome.toLowerCase() === formEdicao.value.produto.toLowerCase())
+  const vlrUnit = prodObj ? Number(prodObj.valor) : 0
+  const qtdNum = Number(formEdicao.value.qtd)
+  const vlrTot = formEdicao.value.tipo === 'Abastecimento' ? qtdNum * vlrUnit : 0
+
+  const res = store.atualizarRegistro(formEdicao.value.id, {
+    tipo: formEdicao.value.tipo,
+    dataHora: dataHoraFinal,
+    marca: formEdicao.value.marca,
+    celula: formEdicao.value.celula.trim().toUpperCase(),
+    produto: formEdicao.value.produto.trim(),
+    qtd: qtdNum,
+    valorUnitario: vlrUnit,
+    valorTotal: vlrTot,
+    cracha: formEdicao.value.cracha.trim(),
+    nome: `Crachá ${formEdicao.value.cracha.trim()}`
+  })
+
+  if (res.ok) {
+    fecharModalEdicao()
+    store.mostrarNotificacaoCentro({
+      tipo: 'sucesso',
+      titulo: 'Registro Atualizado!',
+      mensagem: 'As alterações do lançamento foram salvas com sucesso.'
+    })
+  } else {
+    erroEdicao.value = res.msg || 'Erro ao atualizar registro.'
+  }
+}
 
 const listaMarcasFiltro = computed(() => ['TODAS', ...store.marcas])
 
@@ -96,9 +199,23 @@ const totais = computed(() => {
 })
 
 const removerRegistro = (id) => {
-  if (confirm('Tem certeza que deseja remover este lançamento?')) {
-    store.removerRegistro(id)
-  }
+  const item = store.registros.find(r => r.id === id)
+  const itemDesc = item 
+    ? `${item.tipo}: ${item.produto} • ${Number(item.qtd).toLocaleString('pt-BR')} Kg/L (${item.marca || item.celula})` 
+    : `Lançamento #${id}`
+
+  store.abrirConfirmacaoExclusao({
+    titulo: 'Excluir Lançamento',
+    descricao: 'Tem certeza que deseja excluir este lançamento? Esta ação removerá o registro e atualizará todos os relatórios.',
+    itemNome: itemDesc,
+    onConfirm: () => {
+      store.removerRegistro(id)
+      return {
+        titulo: 'Lançamento Removido!',
+        msg: 'O registro foi excluído e os totais foram recalculados com sucesso.'
+      }
+    }
+  })
 }
 
 // Exportar dados atuais filtrados para arquivo CSV
@@ -306,7 +423,7 @@ const exportarCSV = () => {
               <th>Crachá</th>
               <th class="text-right">Quantidade</th>
               <th class="text-right">Valor Estimado</th>
-              <th class="text-center">Ações</th>
+              <th v-if="store.isAdmin" class="text-center">Ações</th>
             </tr>
           </thead>
           <tbody>
@@ -345,20 +462,113 @@ const exportarCSV = () => {
               <td class="text-right font-bold" :class="item.valorTotal > 0 ? 'text-primary' : 'text-muted'">
                 {{ item.valorTotal > 0 ? formatarMoeda(item.valorTotal) : '—' }}
               </td>
-              <td class="text-center">
-                <button 
-                  @click="removerRegistro(item.id)" 
-                  class="btn-icon-danger" 
-                  title="Excluir este lançamento"
-                >
-                  <Trash2 :size="16" />
-                </button>
+              <td v-if="store.isAdmin" class="text-center">
+                <div class="actions-buttons">
+                  <button 
+                    @click="abrirModalEdicao(item)" 
+                    class="btn-icon-edit" 
+                    title="Editar este lançamento"
+                  >
+                    <Pencil :size="16" />
+                  </button>
+                  <button 
+                    @click="removerRegistro(item.id)" 
+                    class="btn-icon-danger" 
+                    title="Excluir este lançamento"
+                  >
+                    <Trash2 :size="16" />
+                  </button>
+                </div>
               </td>
             </tr>
           </tbody>
         </table>
       </div>
     </div>
+
+    <!-- Modal de Edição de Lançamento (Apenas Admin) -->
+    <Teleport to="body">
+      <Transition name="fade">
+        <div 
+          v-if="modalEdicaoAberto" 
+          class="edit-modal-backdrop"
+          @click.self="fecharModalEdicao"
+        >
+          <div class="edit-modal-card">
+            <div class="edit-modal-header">
+              <div class="edit-modal-icon" :class="formEdicao.tipo === 'Abastecimento' ? 'icon-circle-abast' : 'icon-circle-residuo'">
+                <Pencil :size="22" />
+              </div>
+              <div class="edit-modal-titles">
+                <h3>Editar Lançamento #{{ formEdicao.id }}</h3>
+                <p>Alteração autorizada pelo Administrador ({{ store.usuarioAdminLogado?.nome }})</p>
+              </div>
+              <button type="button" @click="fecharModalEdicao" class="btn-close-modal">
+                <X :size="20" />
+              </button>
+            </div>
+
+            <form @submit.prevent="salvarEdicao" class="edit-form">
+              <div class="form-grid-edit">
+                <div class="input-group">
+                  <label><Calendar :size="15" /> Data</label>
+                  <input type="date" v-model="formEdicao.data" class="modern-input" required />
+                </div>
+
+                <div class="input-group">
+                  <label><IdCard :size="15" /> Crachá</label>
+                  <input type="text" v-model="formEdicao.cracha" class="modern-input" required />
+                </div>
+              </div>
+
+              <div class="form-grid-edit">
+                <div class="input-group">
+                  <label><Tag :size="15" /> Marca</label>
+                  <select v-model="formEdicao.marca" class="modern-input" required>
+                    <option v-for="m in store.marcas" :key="m" :value="m">{{ m }}</option>
+                  </select>
+                </div>
+
+                <div class="input-group">
+                  <label><Building2 :size="15" /> Célula de Produção</label>
+                  <select v-model="formEdicao.celula" class="modern-input" required>
+                    <option v-for="c in store.celulas" :key="c" :value="c">{{ c }}</option>
+                  </select>
+                </div>
+              </div>
+
+              <div class="form-grid-edit">
+                <div class="input-group">
+                  <label><FlaskConical :size="15" /> Produto Químico</label>
+                  <select v-model="formEdicao.produto" class="modern-input" required>
+                    <option v-for="p in store.produtos" :key="p.id" :value="p.nome">{{ p.nome }}</option>
+                  </select>
+                </div>
+
+                <div class="input-group">
+                  <label><Scale :size="15" /> Quantidade (Kg / L)</label>
+                  <input type="number" step="0.001" min="0.001" v-model="formEdicao.qtd" class="modern-input" required />
+                </div>
+              </div>
+
+              <div v-if="erroEdicao" class="alert-danger alert-login">
+                <AlertCircle :size="16" />
+                <span>{{ erroEdicao }}</span>
+              </div>
+
+              <div class="edit-modal-actions">
+                <button type="button" @click="fecharModalEdicao" class="btn-secondary">
+                  Cancelar
+                </button>
+                <button type="submit" class="btn-primary">
+                  <Save :size="17" /> Salvar Alterações
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
   </div>
 </template>
 
@@ -772,5 +982,128 @@ const exportarCSV = () => {
 
 .mt-3 {
   margin-top: 12px;
+}
+
+/* Botões de Ação na Tabela */
+.actions-buttons {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+}
+
+.btn-icon-edit {
+  background: #f1f5f9;
+  border: 1px solid #cbd5e1;
+  color: #475569;
+  width: 32px;
+  height: 32px;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-icon-edit:hover {
+  background: #e0e7ff;
+  border-color: #a5b4fc;
+  color: #4338ca;
+  transform: scale(1.05);
+}
+
+/* Modal de Edição */
+.edit-modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 100000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(15, 23, 42, 0.75);
+  backdrop-filter: blur(5px);
+}
+
+.edit-modal-card {
+  background: white;
+  border-radius: var(--radius-lg);
+  width: 100%;
+  max-width: 540px;
+  padding: 28px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.4);
+  border: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+  animation: zoomInModal 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+}
+
+.edit-modal-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+}
+
+.edit-modal-icon {
+  width: 46px;
+  height: 46px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+}
+
+.icon-circle-abast {
+  background: #eef2ff;
+  color: #4f46e5;
+}
+
+.icon-circle-residuo {
+  background: #fef3c7;
+  color: #d97706;
+}
+
+.edit-modal-titles h3 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text-main);
+  letter-spacing: -0.3px;
+}
+
+.edit-modal-titles p {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-top: 2px;
+}
+
+.edit-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.form-grid-edit {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 14px;
+}
+
+@media (max-width: 500px) {
+  .form-grid-edit {
+    grid-template-columns: 1fr;
+  }
+}
+
+.edit-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 10px;
 }
 </style>

@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { 
   Save, 
@@ -11,7 +11,10 @@ import {
   FlaskConical, 
   Scale, 
   List,
-  DollarSign
+  DollarSign,
+  Lock,
+  AlertCircle,
+  X
 } from 'lucide-vue-next'
 import { useRegistrosStore } from '../stores/registros'
 
@@ -27,16 +30,35 @@ const obterDataHoje = () => {
   return `${ano}-${mes}-${dia}`
 }
 
+// Helper para verificar se o campo tem valor preenchido (para aplicar cor de preenchido)
+const isCampoPreenchido = (valor) => {
+  if (valor === null || valor === undefined) return false
+  if (typeof valor === 'string') return valor.trim().length > 0
+  return String(valor).length > 0
+}
+
 const form = ref({
   data: obterDataHoje(),
   cracha: '',
-  marca: store.marcas[0] || '',
+  marca: '',
   celula: '',
-  produto: store.produtos[0]?.nome || '',
+  produto: '',
   quantidade: ''
 })
 
 const sucesso = ref(false)
+
+// Modal de Confirmação do Crachá (solicitado ao clicar em Salvar)
+const modalCrachaAberto = ref(false)
+const crachaTemp = ref('')
+const erroCracha = ref('')
+const inputCrachaRef = ref(null)
+
+const fecharModalCracha = () => {
+  modalCrachaAberto.value = false
+  crachaTemp.value = ''
+  erroCracha.value = ''
+}
 
 const formatarMoeda = (valor) => {
   return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valor || 0)
@@ -59,10 +81,9 @@ const custoTotalCalculado = computed(() => {
   return qtd * valorUnitario.value
 })
 
-const salvar = () => {
+const solicitarCracha = () => {
   if (
     !form.value.data || 
-    !form.value.cracha || 
     !form.value.marca || 
     !form.value.celula || 
     !form.value.produto || 
@@ -70,40 +91,56 @@ const salvar = () => {
   ) {
     return
   }
+  crachaTemp.value = ''
+  erroCracha.value = ''
+  modalCrachaAberto.value = true
+  nextTick(() => {
+    inputCrachaRef.value?.focus()
+  })
+}
+
+const confirmarCrachaESalvar = () => {
+  const crachaLimpo = (crachaTemp.value || '').trim()
+  if (!crachaLimpo) {
+    erroCracha.value = 'Por favor, digite ou aproxime o crachá do operador para salvar.'
+    nextTick(() => inputCrachaRef.value?.focus())
+    return
+  }
 
   // Formatar data YYYY-MM-DD para DD/MM/YYYY
   const [ano, mes, dia] = form.value.data.split('-')
   const dataFormatada = `${dia}/${mes}/${ano}`
   const horaAtual = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
-
   const qtdNum = Number(form.value.quantidade)
 
   store.adicionarRegistro({
     tipo: 'Abastecimento',
     dataHora: `${dataFormatada} ${horaAtual}`,
-    cracha: form.value.cracha.trim(),
+    cracha: crachaLimpo,
     marca: form.value.marca,
     celula: form.value.celula.trim().toUpperCase(),
     produto: form.value.produto.trim(),
     qtd: qtdNum,
     valorUnitario: valorUnitario.value,
     valorTotal: custoTotalCalculado.value,
-    nome: `Crachá ${form.value.cracha.trim()}`
+    nome: `Crachá ${crachaLimpo}`
   })
 
   sucesso.value = true
 
-  // Limpa os campos preservando a data de hoje, a marca e o produto padrão
+  // Ao salvar: limpa Produto Químico e Quantidade Abastecida, preservando Data, Marca e Célula
   const marcaAtual = form.value.marca
-  const prodAtual = form.value.produto
+  const celulaAtual = form.value.celula
   form.value = {
-    data: obterDataHoje(),
+    data: form.value.data || obterDataHoje(),
     cracha: '',
     marca: marcaAtual,
-    celula: '',
-    produto: prodAtual,
+    celula: celulaAtual,
+    produto: '',
     quantidade: ''
   }
+
+  fecharModalCracha()
 
   setTimeout(() => {
     sucesso.value = false
@@ -158,7 +195,7 @@ const salvar = () => {
         </div>
       </div>
 
-      <form @submit.prevent="salvar" class="modern-form">
+      <form @submit.prevent="solicitarCracha" class="modern-form">
         <!-- Linha 1: Data do Abastecimento e Crachá -->
         <div class="form-grid">
           <div class="input-group">
@@ -166,20 +203,17 @@ const salvar = () => {
             <input 
               type="date" 
               v-model="form.data" 
-              class="modern-input" 
+              :class="['modern-input', { 'input-filled': isCampoPreenchido(form.data) }]" 
               required 
             />
           </div>
 
           <div class="input-group">
-            <label><IdCard :size="16" /> Crachá</label>
-            <input
-              type="text"
-              v-model="form.cracha"
-              class="modern-input"
-              placeholder="Digite o número do crachá (Ex: 58492)"
-              required
-            />
+            <label><IdCard :size="16" /> Crachá do Operador</label>
+            <div class="cracha-lock-badge">
+              <Lock :size="14" />
+              <span>Solicitado ao clicar em Salvar</span>
+            </div>
           </div>
         </div>
 
@@ -188,11 +222,15 @@ const salvar = () => {
           <div class="input-group">
             <div class="label-with-link">
               <label><Tag :size="16" /> Marca</label>
-              <router-link to="/cadastros" class="link-manage" title="Cadastrar nova marca">
+              <router-link v-if="store.isAdmin" to="/cadastros?tipo=marcas" class="link-manage" title="Cadastrar nova marca">
                 + Gerenciar
               </router-link>
             </div>
-            <select v-model="form.marca" class="modern-input" required>
+            <select 
+              v-model="form.marca" 
+              :class="['modern-input', { 'input-filled': isCampoPreenchido(form.marca) }]" 
+              required
+            >
               <option value="" disabled>Selecione a marca...</option>
               <option v-for="m in store.marcas" :key="m" :value="m">
                 {{ m }}
@@ -200,16 +238,24 @@ const salvar = () => {
             </select>
           </div>
 
-          <!-- Célula: apenas o campo de texto solicitado -->
+          <!-- Célula: Lista Suspensa -->
           <div class="input-group">
-            <label><Building2 :size="16" /> Célula</label>
-            <input
-              type="text"
+            <div class="label-with-link">
+              <label><Building2 :size="16" /> Célula</label>
+              <router-link v-if="store.isAdmin" to="/cadastros?tipo=celulas" class="link-manage" title="Cadastrar nova célula">
+                + Gerenciar
+              </router-link>
+            </div>
+            <select
               v-model="form.celula"
-              class="modern-input"
-              placeholder="Digite a célula (Ex: Célula 04, Montagem A...)"
+              :class="['modern-input', { 'input-filled': isCampoPreenchido(form.celula) }]"
               required
-            />
+            >
+              <option value="" disabled>Selecione a célula...</option>
+              <option v-for="c in store.celulas" :key="c" :value="c">
+                {{ c }}
+              </option>
+            </select>
           </div>
         </div>
 
@@ -218,12 +264,16 @@ const salvar = () => {
           <div class="input-group">
             <div class="label-with-link">
               <label><FlaskConical :size="16" /> Produto</label>
-              <router-link to="/cadastros" class="link-manage" title="Cadastrar novo produto">
+              <router-link v-if="store.isAdmin" to="/cadastros?tipo=produtos" class="link-manage" title="Cadastrar novo produto">
                 + Gerenciar
               </router-link>
             </div>
             <!-- Lista suspensa com apenas o nome do produto -->
-            <select v-model="form.produto" class="modern-input" required>
+            <select 
+              v-model="form.produto" 
+              :class="['modern-input', { 'input-filled': isCampoPreenchido(form.produto) }]" 
+              required
+            >
               <option value="" disabled>Selecione o produto químico...</option>
               <option v-for="p in store.produtos" :key="p.id" :value="p.nome">
                 {{ p.nome }}
@@ -237,13 +287,13 @@ const salvar = () => {
               <input
                 type="number"
                 v-model="form.quantidade"
-                class="modern-input"
+                :class="['modern-input', { 'input-filled': isCampoPreenchido(form.quantidade) }]"
                 step="0.001"
                 placeholder="0.000"
                 min="0.001"
                 required
               />
-              <span class="suffix">Kg / L</span>
+              <span class="suffix" :class="{ 'suffix-filled': isCampoPreenchido(form.quantidade) }">Kg / L</span>
             </div>
             <span class="field-hint">Informe a quantidade abastecida (em Kg ou Litros)</span>
           </div>
@@ -260,6 +310,86 @@ const salvar = () => {
         </div>
       </form>
     </div>
+
+    <!-- Modal Flutuante de Confirmação do Crachá do Operador -->
+    <Teleport to="body">
+      <Transition name="fade">
+        <div 
+          v-if="modalCrachaAberto" 
+          class="floating-modal-backdrop cracha-modal-backdrop"
+          @click.self="fecharModalCracha"
+          aria-modal="true"
+          role="dialog"
+        >
+          <div class="cracha-modal-card">
+            <div class="cracha-modal-header">
+              <div class="cracha-modal-icon icon-circle-abast">
+                <IdCard :size="24" />
+              </div>
+              <div class="cracha-modal-titles">
+                <h3>Identificação do Operador</h3>
+                <p>Aproxime ou digite o crachá para confirmar e salvar o abastecimento</p>
+              </div>
+              <button type="button" @click="fecharModalCracha" class="btn-close-modal" title="Cancelar">
+                <X :size="20" />
+              </button>
+            </div>
+
+            <!-- Resumo da Operação -->
+            <div class="cracha-resumo-box resumo-abast">
+              <div class="resumo-linha">
+                <span class="resumo-label">Operação:</span>
+                <span class="resumo-val font-bold">Abastecimento Químico</span>
+              </div>
+              <div class="resumo-linha">
+                <span class="resumo-label">Produto:</span>
+                <span class="resumo-val font-bold">{{ form.produto }}</span>
+              </div>
+              <div class="resumo-linha">
+                <span class="resumo-label">Quantidade:</span>
+                <span class="resumo-val font-bold text-primary">{{ form.quantidade }} Kg / L</span>
+              </div>
+              <div class="resumo-linha">
+                <span class="resumo-label">Célula / Marca:</span>
+                <span class="resumo-val text-muted">{{ form.celula }} • {{ form.marca }}</span>
+              </div>
+            </div>
+
+            <!-- Formulário de Leitura / Digitação do Crachá -->
+            <form @submit.prevent="confirmarCrachaESalvar" class="cracha-form">
+              <div class="input-group">
+                <label class="label-cracha"><IdCard :size="16" /> Crachá do Operador *</label>
+                <input
+                  ref="inputCrachaRef"
+                  type="text"
+                  v-model="crachaTemp"
+                  class="modern-input input-cracha-destaque"
+                  :class="{ 'input-filled': isCampoPreenchido(crachaTemp) }"
+                  placeholder="Digite ou aproxime o crachá..."
+                  required
+                  autofocus
+                />
+                <span class="field-hint-cracha">Pressione <strong>Enter</strong> ou clique em Confirmar para salvar</span>
+              </div>
+
+              <div v-if="erroCracha" class="alert-danger alert-cracha">
+                <AlertCircle :size="16" />
+                <span>{{ erroCracha }}</span>
+              </div>
+
+              <div class="cracha-modal-actions">
+                <button type="button" @click="fecharModalCracha" class="btn-secondary">
+                  Cancelar
+                </button>
+                <button type="submit" class="btn-primary">
+                  <CheckCircle2 :size="18" /> Confirmar e Salvar
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      </Transition>
+    </Teleport>
   </div>
 </template>
 
@@ -420,5 +550,177 @@ const salvar = () => {
   margin-top: 12px;
   padding-top: 20px;
   border-top: 1px solid var(--border);
+}
+
+/* Crachá Placeholder Bloqueado no Formulário */
+.cracha-lock-badge {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  background-color: #f8fafc;
+  border: 1.5px dashed #cbd5e1;
+  border-radius: var(--radius-md);
+  color: #64748b;
+  font-size: 0.86rem;
+  font-weight: 600;
+  cursor: default;
+  user-select: none;
+}
+
+/* Modal de Confirmação do Crachá */
+.cracha-modal-backdrop {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  z-index: 100000;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  background: rgba(15, 23, 42, 0.7);
+  backdrop-filter: blur(4px);
+}
+
+.cracha-modal-card {
+  background: white;
+  border-radius: var(--radius-lg);
+  width: 100%;
+  max-width: 490px;
+  padding: 28px;
+  box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.4);
+  border: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.cracha-modal-header {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  position: relative;
+}
+
+.cracha-modal-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: #eef2ff;
+  color: #4f46e5;
+}
+
+.cracha-modal-titles h3 {
+  font-size: 1.25rem;
+  font-weight: 700;
+  color: var(--text-main);
+  letter-spacing: -0.3px;
+}
+
+.cracha-modal-titles p {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+  margin-top: 2px;
+  line-height: 1.4;
+}
+
+.btn-close-modal {
+  margin-left: auto;
+  background: none;
+  border: none;
+  color: #94a3b8;
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 6px;
+  transition: all 0.2s;
+}
+
+.btn-close-modal:hover {
+  background: #f1f5f9;
+  color: #0f172a;
+}
+
+.cracha-resumo-box {
+  background: #f8fafc;
+  border: 1px solid #e2e8f0;
+  border-radius: var(--radius-md);
+  padding: 14px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cracha-resumo-box.resumo-abast {
+  border-left: 4px solid #4f46e5;
+  background: #f8faff;
+}
+
+.resumo-linha {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.88rem;
+}
+
+.resumo-label {
+  color: var(--text-muted);
+  font-weight: 500;
+}
+
+.resumo-val {
+  color: var(--text-main);
+}
+
+.cracha-form {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.label-cracha {
+  font-weight: 700 !important;
+  color: var(--text-main) !important;
+}
+
+.input-cracha-destaque {
+  font-size: 1.15rem !important;
+  font-weight: 700 !important;
+  letter-spacing: 0.8px;
+  padding: 14px 18px !important;
+  text-align: center;
+  border-width: 2px !important;
+}
+
+.field-hint-cracha {
+  display: block;
+  font-size: 0.78rem;
+  color: var(--text-muted);
+  text-align: center;
+  margin-top: 4px;
+}
+
+.alert-cracha {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.85rem;
+  padding: 10px 14px;
+  border-radius: var(--radius-md);
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #b91c1c;
+}
+
+.cracha-modal-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 12px;
+  margin-top: 8px;
 }
 </style>
