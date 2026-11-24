@@ -70,6 +70,12 @@ const fecharModalEdicao = () => {
   erroEdicao.value = ''
 }
 
+const abrirLista = (e) => {
+  try {
+    e?.target?.showPicker?.()
+  } catch {}
+}
+
 const salvarEdicao = () => {
   if (
     !formEdicao.value.data || 
@@ -524,25 +530,52 @@ const exportarCSV = () => {
               <div class="form-grid-edit">
                 <div class="input-group">
                   <label><Tag :size="15" /> Marca</label>
-                  <select v-model="formEdicao.marca" class="modern-input" required>
+                  <input
+                    type="text"
+                    list="lista-marcas-edicao"
+                    v-model="formEdicao.marca"
+                    class="modern-input"
+                    placeholder="Selecione ou digite a marca..."
+                    @click="abrirLista($event)"
+                    required
+                  />
+                  <datalist id="lista-marcas-edicao">
                     <option v-for="m in store.marcas" :key="m" :value="m">{{ m }}</option>
-                  </select>
+                  </datalist>
                 </div>
 
                 <div class="input-group">
                   <label><Building2 :size="15" /> Célula de Produção</label>
-                  <select v-model="formEdicao.celula" class="modern-input" required>
+                  <input
+                    type="text"
+                    list="lista-celulas-edicao"
+                    v-model="formEdicao.celula"
+                    class="modern-input"
+                    placeholder="Selecione ou digite a célula..."
+                    @click="abrirLista($event)"
+                    required
+                  />
+                  <datalist id="lista-celulas-edicao">
                     <option v-for="c in store.celulas" :key="c" :value="c">{{ c }}</option>
-                  </select>
+                  </datalist>
                 </div>
               </div>
 
               <div class="form-grid-edit">
                 <div class="input-group">
                   <label><FlaskConical :size="15" /> Produto Químico</label>
-                  <select v-model="formEdicao.produto" class="modern-input" required>
+                  <input
+                    type="text"
+                    list="lista-produtos-edicao"
+                    v-model="formEdicao.produto"
+                    class="modern-input"
+                    placeholder="Selecione ou digite o produto químico..."
+                    @click="abrirLista($event)"
+                    required
+                  />
+                  <datalist id="lista-produtos-edicao">
                     <option v-for="p in store.produtos" :key="p.id" :value="p.nome">{{ p.nome }}</option>
-                  </select>
+                  </datalist>
                 </div>
 
                 <div class="input-group">

@@ -37,6 +37,12 @@ const isCampoPreenchido = (valor) => {
   return String(valor).length > 0
 }
 
+const abrirLista = (e) => {
+  try {
+    e?.target?.showPicker?.()
+  } catch {}
+}
+
 const form = ref({
   data: obterDataHoje(),
   cracha: '',
@@ -217,6 +223,7 @@ const confirmarCrachaESalvar = () => {
         </div>
 
         <!-- Linha 2: Marca (Lista Suspensa) e Célula -->
+        <!-- Linha 2: Marca (Lista Suspensa Editável) e Célula (Lista Suspensa Editável) -->
         <div class="form-grid">
           <div class="input-group">
             <div class="label-with-link">
@@ -225,18 +232,21 @@ const confirmarCrachaESalvar = () => {
                 + Gerenciar
               </router-link>
             </div>
-            <select 
+            <input 
+              type="text"
+              list="lista-marcas-residuo"
               v-model="form.marca" 
               :class="['modern-input', { 'input-filled': isCampoPreenchido(form.marca) }]" 
+              placeholder="Selecione ou digite a marca..."
+              @click="abrirLista($event)"
               required
-            >
-              <option value="" disabled>Selecione a marca...</option>
-              <option v-for="m in store.marcas" :key="m" :value="m">
-                {{ m }}
-              </option>
-            </select>
+            />
+            <datalist id="lista-marcas-residuo">
+              <option v-for="m in store.marcas" :key="m" :value="m">{{ m }}</option>
+            </datalist>
           </div>
 
+          <!-- Célula: Lista Suspensa Editável -->
           <div class="input-group">
             <div class="label-with-link">
               <label><Building2 :size="16" /> Célula</label>
@@ -244,20 +254,22 @@ const confirmarCrachaESalvar = () => {
                 + Gerenciar
               </router-link>
             </div>
-            <select
+            <input
+              type="text"
+              list="lista-celulas-residuo"
               v-model="form.celula"
               :class="['modern-input', { 'input-filled': isCampoPreenchido(form.celula) }]"
+              placeholder="Selecione ou digite a célula..."
+              @click="abrirLista($event)"
               required
-            >
-              <option value="" disabled>Selecione a célula...</option>
-              <option v-for="c in store.celulas" :key="c" :value="c">
-                {{ c }}
-              </option>
-            </select>
+            />
+            <datalist id="lista-celulas-residuo">
+              <option v-for="c in store.celulas" :key="c" :value="c">{{ c }}</option>
+            </datalist>
           </div>
         </div>
 
-        <!-- Linha 3: Produto (Lista Suspensa) e Quantidade -->
+        <!-- Linha 3: Produto (Lista Suspensa Editável) e Quantidade -->
         <div class="form-grid">
           <div class="input-group">
             <div class="label-with-link">
@@ -266,16 +278,18 @@ const confirmarCrachaESalvar = () => {
                 + Gerenciar
               </router-link>
             </div>
-            <select 
+            <input 
+              type="text"
+              list="lista-produtos-residuo"
               v-model="form.produto" 
               :class="['modern-input', { 'input-filled': isCampoPreenchido(form.produto) }]" 
+              placeholder="Selecione ou digite o produto..."
+              @click="abrirLista($event)"
               required
-            >
-              <option value="" disabled>Selecione o produto químico...</option>
-              <option v-for="p in store.produtos" :key="p.id" :value="p.nome">
-                {{ p.nome }}
-              </option>
-            </select>
+            />
+            <datalist id="lista-produtos-residuo">
+              <option v-for="p in store.produtos" :key="p.id" :value="p.nome">{{ p.nome }}</option>
+            </datalist>
           </div>
 
           <div class="input-group">

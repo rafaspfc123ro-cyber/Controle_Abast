@@ -2,6 +2,7 @@
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
 import { 
+  Home,
   FlaskConical, 
   Trash2, 
   Activity, 
@@ -13,7 +14,7 @@ import {
   Tag,
   DollarSign,
   Clock,
-  LayoutDashboard,
+  LayoutDashboard, 
   X,
   Save,
   CheckCircle2,
@@ -102,6 +103,13 @@ const isCampoPreenchido = (valor) => {
   if (valor === null || valor === undefined) return false
   if (typeof valor === 'string') return valor.trim().length > 0
   return String(valor).length > 0
+}
+
+// Abrir lista suspensa do datalist no clique do usuário
+const abrirLista = (e) => {
+  try {
+    e?.target?.showPicker?.()
+  } catch {}
 }
 
 // ----------------------------------------------------
@@ -373,7 +381,7 @@ const removerRegistroInicio = (id) => {
       <div>
         <div class="header-badge-row">
           <div class="header-badge">
-            <LayoutDashboard :size="15" />
+            <Home :size="15" />
             <span>Setor Químico • Calçados</span>
           </div>
           <div class="today-indicator">
@@ -553,28 +561,34 @@ const removerRegistroInicio = (id) => {
               <div class="form-grid">
                 <div class="input-group">
                   <label><Tag :size="15" /> Marca</label>
-                  <select
+                  <input
+                    type="text"
+                    list="lista-marcas-inicio-abast"
                     v-model="formAbast.marca"
                     :class="['modern-input', { 'input-filled': isCampoPreenchido(formAbast.marca) }]"
+                    placeholder="Selecione ou digite a marca..."
+                    @click="abrirLista($event)"
                     required
-                  >
-                    <option value="" disabled>Selecione a marca...</option>
-                    <option v-if="store.marcas.length === 0" value="" disabled>Nenhuma marca cadastrada (+ Cadastros)</option>
+                  />
+                  <datalist id="lista-marcas-inicio-abast">
                     <option v-for="m in store.marcas" :key="m" :value="m">{{ m }}</option>
-                  </select>
+                  </datalist>
                 </div>
 
                 <div class="input-group">
                   <label><Building2 :size="15" /> Célula de Produção</label>
-                  <select
+                  <input
+                    type="text"
+                    list="lista-celulas-inicio-abast"
                     v-model="formAbast.celula"
                     :class="['modern-input', { 'input-filled': isCampoPreenchido(formAbast.celula) }]"
+                    placeholder="Selecione ou digite a célula..."
+                    @click="abrirLista($event)"
                     required
-                  >
-                    <option value="" disabled>Selecione a célula...</option>
-                    <option v-if="store.celulas.length === 0" value="" disabled>Nenhuma célula cadastrada (+ Cadastros)</option>
+                  />
+                  <datalist id="lista-celulas-inicio-abast">
                     <option v-for="c in store.celulas" :key="c" :value="c">{{ c }}</option>
-                  </select>
+                  </datalist>
                 </div>
               </div>
 
@@ -582,15 +596,18 @@ const removerRegistroInicio = (id) => {
               <div class="form-grid">
                 <div class="input-group">
                   <label><FlaskConical :size="15" /> Produto Químico</label>
-                  <select
+                  <input
+                    type="text"
+                    list="lista-produtos-inicio-abast"
                     v-model="formAbast.produto"
                     :class="['modern-input', { 'input-filled': isCampoPreenchido(formAbast.produto) }]"
+                    placeholder="Selecione ou digite o produto químico..."
+                    @click="abrirLista($event)"
                     required
-                  >
-                    <option value="" disabled>Selecione o produto químico...</option>
-                    <option v-if="store.produtos.length === 0" value="" disabled>Nenhum produto cadastrado (+ Cadastros)</option>
+                  />
+                  <datalist id="lista-produtos-inicio-abast">
                     <option v-for="p in store.produtos" :key="p.id" :value="p.nome">{{ p.nome }}</option>
-                  </select>
+                  </datalist>
                 </div>
 
                 <div class="input-group">
@@ -674,28 +691,34 @@ const removerRegistroInicio = (id) => {
               <div class="form-grid">
                 <div class="input-group">
                   <label><Tag :size="15" /> Marca</label>
-                  <select
+                  <input
+                    type="text"
+                    list="lista-marcas-inicio-residuo"
                     v-model="formResiduo.marca"
                     :class="['modern-input', { 'input-filled': isCampoPreenchido(formResiduo.marca) }]"
+                    placeholder="Selecione ou digite a marca..."
+                    @click="abrirLista($event)"
                     required
-                  >
-                    <option value="" disabled>Selecione a marca...</option>
-                    <option v-if="store.marcas.length === 0" value="" disabled>Nenhuma marca cadastrada (+ Cadastros)</option>
+                  />
+                  <datalist id="lista-marcas-inicio-residuo">
                     <option v-for="m in store.marcas" :key="m" :value="m">{{ m }}</option>
-                  </select>
+                  </datalist>
                 </div>
 
                 <div class="input-group">
                   <label><Building2 :size="15" /> Célula</label>
-                  <select
+                  <input
+                    type="text"
+                    list="lista-celulas-inicio-residuo"
                     v-model="formResiduo.celula"
                     :class="['modern-input', { 'input-filled': isCampoPreenchido(formResiduo.celula) }]"
+                    placeholder="Selecione ou digite a célula..."
+                    @click="abrirLista($event)"
                     required
-                  >
-                    <option value="" disabled>Selecione a célula...</option>
-                    <option v-if="store.celulas.length === 0" value="" disabled>Nenhuma célula cadastrada (+ Cadastros)</option>
+                  />
+                  <datalist id="lista-celulas-inicio-residuo">
                     <option v-for="c in store.celulas" :key="c" :value="c">{{ c }}</option>
-                  </select>
+                  </datalist>
                 </div>
               </div>
 
@@ -703,15 +726,18 @@ const removerRegistroInicio = (id) => {
               <div class="form-grid">
                 <div class="input-group">
                   <label><FlaskConical :size="15" /> Produto</label>
-                  <select
+                  <input
+                    type="text"
+                    list="lista-produtos-inicio-residuo"
                     v-model="formResiduo.produto"
                     :class="['modern-input', { 'input-filled': isCampoPreenchido(formResiduo.produto) }]"
+                    placeholder="Selecione ou digite o produto..."
+                    @click="abrirLista($event)"
                     required
-                  >
-                    <option value="" disabled>Selecione o produto químico...</option>
-                    <option v-if="store.produtos.length === 0" value="" disabled>Nenhum produto cadastrado (+ Cadastros)</option>
+                  />
+                  <datalist id="lista-produtos-inicio-residuo">
                     <option v-for="p in store.produtos" :key="p.id" :value="p.nome">{{ p.nome }}</option>
-                  </select>
+                  </datalist>
                 </div>
 
                 <div class="input-group">

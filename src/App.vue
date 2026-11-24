@@ -1,6 +1,7 @@
 <script setup>
 import { ref, nextTick } from 'vue'
 import { 
+  Home,
   LayoutDashboard, 
   BarChart2, 
   FlaskConical, 
@@ -90,7 +91,7 @@ const fazerLogout = () => {
         <span class="menu-label">MENU PRINCIPAL</span>
         <router-link to="/">
           <div class="link-content">
-            <LayoutDashboard :size="19" />
+            <Home :size="19" />
             <span>Painel</span>
           </div>
         </router-link>
@@ -108,7 +109,7 @@ const fazerLogout = () => {
         </router-link>
         <router-link to="/dashboard">
           <div class="link-content">
-            <BarChart2 :size="19" />
+            <LayoutDashboard :size="19" />
             <span>Dashboard</span>
             <span class="badge-dev-pill">Em breve</span>
           </div>
@@ -552,6 +553,23 @@ body {
   border-color: var(--border-focus);
   background: #ffffff;
   box-shadow: 0 0 0 4px var(--primary-glow);
+}
+
+/* Indicador e estilização para inputs editáveis com lista suspensa (datalist) */
+.modern-input[list] {
+  cursor: pointer;
+}
+
+.modern-input[list]::-webkit-calendar-picker-indicator {
+  cursor: pointer;
+  opacity: 0.65;
+  font-size: 1.05rem;
+  transition: opacity 0.2s, transform 0.2s;
+}
+
+.modern-input[list]::-webkit-calendar-picker-indicator:hover {
+  opacity: 1;
+  transform: scale(1.15);
 }
 
 /* Campo preenchido com cor e destaque visual */
