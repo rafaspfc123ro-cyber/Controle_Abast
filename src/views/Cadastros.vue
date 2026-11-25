@@ -1,14 +1,14 @@
 <script setup>
 import { ref, watch, computed, onMounted, onUnmounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
-import { 
-  Tag, 
-  FlaskConical, 
+import {
+  Tag,
+  FlaskConical,
   Building2,
-  Plus, 
-  Trash2, 
-  CheckCircle2, 
-  AlertCircle, 
+  Plus,
+  Trash2,
+  CheckCircle2,
+  AlertCircle,
   Database,
   ArrowLeft,
   ChevronRight,
@@ -21,10 +21,10 @@ import {
   Download,
   FileSpreadsheet,
   FileUp,
-  Copy,
   Check,
   Lock,
-  LogIn
+  LogIn,
+  HardDrive,
 } from 'lucide-vue-next'
 import { useRegistrosStore } from '../stores/registros'
 import BrandLogo from '../components/BrandLogo.vue'
@@ -42,7 +42,7 @@ watch(
     if (novo) {
       cadastroAtivo.value = novo
     }
-  }
+  },
 )
 
 // Estado do formulário de Marca
@@ -130,7 +130,10 @@ const onFileChangeAlterarMarca = (event) => {
   if (file && marca) {
     processarImagemLogo(file, (base64) => {
       store.definirLogoMarca(marca, base64)
-      feedbackMarca.value = { tipo: 'sucesso', msg: `Logo da marca "${marca}" atualizada com sucesso!` }
+      feedbackMarca.value = {
+        tipo: 'sucesso',
+        msg: `Logo da marca "${marca}" atualizada com sucesso!`,
+      }
       setTimeout(() => {
         feedbackMarca.value = { tipo: '', msg: '' }
       }, 3500)
@@ -146,7 +149,10 @@ const temLogoPersonalizada = (marca) => {
 
 const restaurarLogoMarca = (marca) => {
   store.removerLogoMarca(marca)
-  feedbackMarca.value = { tipo: 'sucesso', msg: `Logo personalizada de "${marca}" removida (restaurada padrão).` }
+  feedbackMarca.value = {
+    tipo: 'sucesso',
+    msg: `Logo personalizada de "${marca}" removida (restaurada padrão).`,
+  }
   setTimeout(() => {
     feedbackMarca.value = { tipo: '', msg: '' }
   }, 3000)
@@ -155,7 +161,7 @@ const restaurarLogoMarca = (marca) => {
 // Estado do formulário de Produto
 const novoProduto = ref({
   nome: '',
-  valor: ''
+  valor: '',
 })
 const feedbackProduto = ref({ tipo: '', msg: '' })
 
@@ -198,9 +204,9 @@ const excluirMarca = (marca) => {
       const res = store.removerMarca(marca)
       return {
         titulo: res.ok ? 'Marca Excluída!' : 'Atenção',
-        msg: res.msg
+        msg: res.msg,
       }
-    }
+    },
   })
 }
 
@@ -210,7 +216,7 @@ const salvarProduto = () => {
 
   const res = store.adicionarProduto({
     nome: novoProduto.value.nome,
-    valor: novoProduto.value.valor
+    valor: novoProduto.value.valor,
   })
 
   if (res.ok) {
@@ -234,9 +240,9 @@ const excluirProduto = (id, nome) => {
       const res = store.removerProduto(id)
       return {
         titulo: res.ok ? 'Produto Excluído!' : 'Atenção',
-        msg: res.msg
+        msg: res.msg,
       }
-    }
+    },
   })
 }
 
@@ -266,25 +272,27 @@ const excluirCelula = (celula) => {
       const res = store.removerCelula(celula)
       return {
         titulo: res.ok ? 'Célula Excluída!' : 'Atenção',
-        msg: res.msg
+        msg: res.msg,
       }
-    }
+    },
   })
 }
 
 // Conta quantos abastecimentos já usaram a célula
 const contarUsosCelula = (celula) => {
-  return store.registros.filter(r => (r.celula || '').toUpperCase() === celula.toUpperCase()).length
+  return store.registros.filter((r) => (r.celula || '').toUpperCase() === celula.toUpperCase())
+    .length
 }
 
 // Conta quantos abastecimentos já usaram a marca
 const contarUsosMarca = (marca) => {
-  return store.registros.filter(r => (r.marca || '').toUpperCase() === marca.toUpperCase()).length
+  return store.registros.filter((r) => (r.marca || '').toUpperCase() === marca.toUpperCase()).length
 }
 
 // Conta quantos abastecimentos já usaram o produto
 const contarUsosProduto = (nome) => {
-  return store.registros.filter(r => (r.produto || '').toLowerCase() === nome.toLowerCase()).length
+  return store.registros.filter((r) => (r.produto || '').toLowerCase() === nome.toLowerCase())
+    .length
 }
 
 // ==========================================
@@ -309,9 +317,52 @@ const fecharModalImportacao = () => {
   modalImportacaoAberto.value = false
 }
 
+const limparTextoLote = () => {
+  textoColado.value = ''
+  nomeArquivoCarregado.value = ''
+}
+
 const voltarAoMenu = () => {
   modalImportacaoAberto.value = false
   cadastroAtivo.value = null
+}
+
+// Backup e Restauração de Dados
+const fileInputBackupRef = ref(null)
+
+const abrirSeletorArquivoBackup = () => {
+  fileInputBackupRef.value?.click()
+}
+
+const onArquivoBackupSelecionado = (event) => {
+  const file = event.target.files && event.target.files[0]
+  if (!file) return
+
+  const reader = new FileReader()
+  reader.onload = (e) => {
+    try {
+      const json = JSON.parse(e.target.result)
+      store.abrirConfirmacaoExclusao({
+        titulo: 'Restaurar Backup do Sistema',
+        descricao:
+          'Atenção: A restauração substituirá os dados atuais pelos registros deste arquivo de backup. Deseja prosseguir?',
+        itemNome: `Arquivo: ${file.name}`,
+        onConfirm: () => {
+          const res = store.importarBackupCompleto(json)
+          return {
+            titulo: res.ok ? 'Backup Restaurado!' : 'Atenção',
+            msg: res.msg,
+          }
+        },
+      })
+    } catch {
+      alert(
+        'Não foi possível ler o arquivo. Certifique-se de selecionar um arquivo .json válido gerado pelo ControlAbast.',
+      )
+    }
+  }
+  reader.readAsText(file, 'UTF-8')
+  event.target.value = ''
 }
 
 const onKeydownModal = (e) => {
@@ -342,8 +393,10 @@ const colarDaAreaTransferencia = async () => {
     if (texto) {
       textoColado.value = texto
     }
-  } catch (err) {
-    alert('Não foi possível ler da área de transferência automaticamente. Por favor, cole usando Ctrl + V dentro da caixa de texto.')
+  } catch {
+    alert(
+      'Não foi possível ler da área de transferência automaticamente. Por favor, cole usando Ctrl + V dentro da caixa de texto.',
+    )
   }
 }
 
@@ -361,7 +414,9 @@ const onArquivoLoteSelecionado = (event) => {
 
 const parsePreco = (str) => {
   if (!str) return 0
-  const limpo = String(str).replace(/[R$\s]/g, '').trim()
+  const limpo = String(str)
+    .replace(/[R$\s]/g, '')
+    .trim()
   if (limpo.includes(',') && limpo.includes('.')) {
     return parseFloat(limpo.replace(/\./g, '').replace(',', '.')) || 0
   } else if (limpo.includes(',')) {
@@ -384,17 +439,22 @@ const itensDetectados = computed(() => {
     if (i === 0) {
       const lower = linha.toLowerCase()
       if (
-        lower === 'marca' || lower === 'marcas' ||
-        lower === 'célula' || lower === 'celula' || lower === 'células' || lower === 'celulas' ||
-        lower.startsWith('produto') || lower.startsWith('nome')
+        lower === 'marca' ||
+        lower === 'marcas' ||
+        lower === 'célula' ||
+        lower === 'celula' ||
+        lower === 'células' ||
+        lower === 'celulas' ||
+        lower.startsWith('produto') ||
+        lower.startsWith('nome')
       ) {
         continue
       }
     }
 
     if (tipo === 'produtos') {
-      let nome = ''
-      let valor = 0
+      let nome
+      let valor
 
       if (linha.includes('\t')) {
         const partes = linha.split('\t')
@@ -426,7 +486,10 @@ const itensDetectados = computed(() => {
       if (linha.includes(';') || linha.includes('\t')) {
         nome = linha.split(/[;\t]/)[0]
       }
-      nome = nome.replace(/^["']|["']$/g, '').trim().toUpperCase()
+      nome = nome
+        .replace(/^["']|["']$/g, '')
+        .trim()
+        .toUpperCase()
       if (nome) {
         resultado.push(nome)
       }
@@ -441,28 +504,28 @@ const estatisticasImportacao = computed(() => {
   const tipo = tipoImportacao.value
 
   if (tipo === 'produtos') {
-    const existentesNomes = store.produtos.map(p => p.nome.toLowerCase())
-    const novos = lista.filter(item => !existentesNomes.includes(item.nome.toLowerCase())).length
+    const existentesNomes = store.produtos.map((p) => p.nome.toLowerCase())
+    const novos = lista.filter((item) => !existentesNomes.includes(item.nome.toLowerCase())).length
     return {
       total: lista.length,
       novos,
-      duplicados: lista.length - novos
+      duplicados: lista.length - novos,
     }
   } else if (tipo === 'marcas') {
-    const existentes = store.marcas.map(m => m.toUpperCase())
-    const novos = lista.filter(item => !existentes.includes(item)).length
+    const existentes = store.marcas.map((m) => m.toUpperCase())
+    const novos = lista.filter((item) => !existentes.includes(item)).length
     return {
       total: lista.length,
       novos,
-      duplicados: lista.length - novos
+      duplicados: lista.length - novos,
     }
   } else {
-    const existentes = store.celulas.map(c => c.toUpperCase())
-    const novos = lista.filter(item => !existentes.includes(item)).length
+    const existentes = store.celulas.map((c) => c.toUpperCase())
+    const novos = lista.filter((item) => !existentes.includes(item)).length
     return {
       total: lista.length,
       novos,
-      duplicados: lista.length - novos
+      duplicados: lista.length - novos,
     }
   }
 })
@@ -479,25 +542,25 @@ const executarImportacao = () => {
 
   if (tipo === 'marcas') {
     const res = store.importarMarcasEmLote(lista, substituir)
-    feedbackMarca.value = { 
-      tipo: 'sucesso', 
-      msg: `${res.adicionados} marcas importadas com sucesso! (${res.ignorados} duplicadas ignoradas)` 
+    feedbackMarca.value = {
+      tipo: 'sucesso',
+      msg: `${res.adicionados} marcas importadas com sucesso! (${res.ignorados} duplicadas ignoradas)`,
     }
-    setTimeout(() => feedbackMarca.value = { tipo: '', msg: '' }, 4000)
+    setTimeout(() => (feedbackMarca.value = { tipo: '', msg: '' }), 4000)
   } else if (tipo === 'produtos') {
     const res = store.importarProdutosEmLote(lista, substituir)
-    feedbackProduto.value = { 
-      tipo: 'sucesso', 
-      msg: `${res.adicionados} produtos importados com sucesso! (${res.ignorados} duplicados ignorados)` 
+    feedbackProduto.value = {
+      tipo: 'sucesso',
+      msg: `${res.adicionados} produtos importados com sucesso! (${res.ignorados} duplicados ignorados)`,
     }
-    setTimeout(() => feedbackProduto.value = { tipo: '', msg: '' }, 4000)
+    setTimeout(() => (feedbackProduto.value = { tipo: '', msg: '' }), 4000)
   } else if (tipo === 'celulas') {
     const res = store.importarCelulasEmLote(lista, substituir)
-    feedbackCelula.value = { 
-      tipo: 'sucesso', 
-      msg: `${res.adicionados} células importadas com sucesso! (${res.ignorados} duplicadas ignoradas)` 
+    feedbackCelula.value = {
+      tipo: 'sucesso',
+      msg: `${res.adicionados} células importadas com sucesso! (${res.ignorados} duplicadas ignoradas)`,
     }
-    setTimeout(() => feedbackCelula.value = { tipo: '', msg: '' }, 4000)
+    setTimeout(() => (feedbackCelula.value = { tipo: '', msg: '' }), 4000)
   }
 
   fecharModalImportacao()
@@ -513,7 +576,9 @@ const exportarLista = (tipo) => {
     nomeArquivo = `marcas_calcados_${new Date().toISOString().slice(0, 10)}.csv`
   } else if (t === 'produtos') {
     csv = 'Produto;Valor_Kg_L\r\n'
-    csv += store.produtos.map(p => `"${p.nome}";"${(p.valor || 0).toFixed(2).replace('.', ',')}"`).join('\r\n')
+    csv += store.produtos
+      .map((p) => `"${p.nome}";"${(p.valor || 0).toFixed(2).replace('.', ',')}"`)
+      .join('\r\n')
     nomeArquivo = `produtos_quimicos_${new Date().toISOString().slice(0, 10)}.csv`
   } else if (t === 'celulas') {
     csv = 'Celula\r\n' + store.celulas.join('\r\n')
@@ -555,623 +620,781 @@ const exportarLista = (tipo) => {
     <template v-else>
       <!-- Header -->
       <div class="page-header">
-      <div class="header-badge">
-        <Database :size="15" />
-        <span>Setor Químico • Configurações</span>
-      </div>
-      <h1 class="page-title">Cadastros Gerais</h1>
-      <p class="page-subtitle">
-        {{ !cadastroAtivo 
-          ? 'Selecione abaixo o cadastro que deseja visualizar e gerenciar:' 
-          : 'Gerenciamento de itens cadastrados no sistema' }}
-      </p>
-    </div>
-
-    <!-- 1. TELA INICIAL: LISTA DE BOTÕES PARA ESCOLHER -->
-    <div v-if="!cadastroAtivo" class="cadastros-menu-container">
-      <div class="cadastros-buttons-list">
-        <!-- Botão 1: Marcas -->
-        <button 
-          type="button" 
-          @click="cadastroAtivo = 'marcas'" 
-          class="btn-cadastro-opcao"
-        >
-          <div class="opcao-icon-wrap tag-glow">
-            <Tag :size="24" />
-          </div>
-          <div class="opcao-text">
-            <h3>Marcas</h3>
-            <p>Gerencie as marcas disponíveis no formulário de abastecimento</p>
-          </div>
-          <div class="opcao-meta">
-            <span class="opcao-badge">{{ store.marcas.length }} cadastradas</span>
-            <ChevronRight :size="20" class="opcao-arrow" />
-          </div>
-        </button>
-
-        <!-- Botão 2: Produtos Químicos -->
-        <button 
-          type="button" 
-          @click="cadastroAtivo = 'produtos'" 
-          class="btn-cadastro-opcao"
-        >
-          <div class="opcao-icon-wrap flask-glow">
-            <FlaskConical :size="24" />
-          </div>
-          <div class="opcao-text">
-            <h3>Produtos</h3>
-            <p>Cadastre insumos químicos com nome e valor unitário (R$)</p>
-          </div>
-          <div class="opcao-meta">
-            <span class="opcao-badge">{{ store.produtos.length }} cadastrados</span>
-            <ChevronRight :size="20" class="opcao-arrow" />
-          </div>
-        </button>
-
-        <!-- Botão 3: Células de Produção -->
-        <button 
-          type="button" 
-          @click="cadastroAtivo = 'celulas'" 
-          class="btn-cadastro-opcao"
-        >
-          <div class="opcao-icon-wrap building-glow">
-            <Building2 :size="24" />
-          </div>
-          <div class="opcao-text">
-            <h3>Células</h3>
-            <p>Gerencie as células e setores disponíveis na lista suspensa</p>
-          </div>
-          <div class="opcao-meta">
-            <span class="opcao-badge">{{ store.celulas.length }} cadastradas</span>
-            <ChevronRight :size="20" class="opcao-arrow" />
-          </div>
-        </button>
-      </div>
-    </div>
-
-    <!-- 2. TELA DO CADASTRO ESCOLHIDO -->
-    <div v-else class="cadastro-screen-wrapper">
-      <!-- Barra Superior de Navegação -->
-      <div class="cadastro-nav-bar">
-        <button type="button" @click="voltarAoMenu" class="btn-back-menu">
-          <ArrowLeft :size="16" /> Voltar aos Cadastros
-        </button>
-
-        <!-- Abas para alternar rapidamente -->
-        <div class="cadastros-tab-buttons">
-          <button 
-            type="button" 
-            :class="['btn-tab-pill', { active: cadastroAtivo === 'marcas' }]" 
-            @click="cadastroAtivo = 'marcas'"
-          >
-            <Tag :size="14" /> Marcas ({{ store.marcas.length }})
-          </button>
-
-          <button 
-            type="button" 
-            :class="['btn-tab-pill', { active: cadastroAtivo === 'produtos' }]" 
-            @click="cadastroAtivo = 'produtos'"
-          >
-            <FlaskConical :size="14" /> Produtos ({{ store.produtos.length }})
-          </button>
-
-          <button 
-            type="button" 
-            :class="['btn-tab-pill', { active: cadastroAtivo === 'celulas' }]" 
-            @click="cadastroAtivo = 'celulas'"
-          >
-            <Building2 :size="14" /> Células ({{ store.celulas.length }})
-          </button>
+        <div class="header-badge">
+          <Database :size="15" />
+          <span>Setor Químico • Configurações</span>
         </div>
-
-        <!-- Botões de Ação em Lote (Importar / Exportar) -->
-        <div class="lote-nav-actions">
-          <button 
-            type="button" 
-            class="btn-nav-lote btn-nav-import" 
-            @click="abrirModalImportacao(cadastroAtivo)"
-            title="Importar lista do computador ou colar do Excel"
-          >
-            <ClipboardPaste :size="14" />
-            <span>Importar / Colar</span>
-          </button>
-
-          <button 
-            type="button" 
-            class="btn-nav-lote btn-nav-export" 
-            @click="exportarLista(cadastroAtivo)"
-            title="Exportar esta lista salva para arquivo Excel (.CSV)"
-          >
-            <Download :size="14" />
-            <span>Exportar (.CSV)</span>
-          </button>
-        </div>
+        <h1 class="page-title">Cadastros Gerais</h1>
+        <p class="page-subtitle">
+          {{
+            !cadastroAtivo
+              ? 'Selecione abaixo o cadastro que deseja visualizar e gerenciar:'
+              : 'Gerenciamento de itens cadastrados no sistema'
+          }}
+        </p>
       </div>
 
-      <!-- Tela: Marcas de Calçados -->
-      <div v-if="cadastroAtivo === 'marcas'" class="modern-card cadastro-card">
-        <div class="card-header">
-          <div class="card-icon-title">
-            <div class="icon-wrap tag-glow">
-              <Tag :size="20" />
+      <!-- 1. TELA INICIAL: LISTA DE BOTÕES PARA ESCOLHER -->
+      <div v-if="!cadastroAtivo" class="cadastros-menu-container">
+        <div class="cadastros-buttons-list">
+          <!-- Botão 1: Marcas -->
+          <button type="button" @click="cadastroAtivo = 'marcas'" class="btn-cadastro-opcao">
+            <div class="opcao-icon-wrap tag-glow">
+              <Tag :size="24" />
             </div>
-            <div>
-              <h3>Marcas de Calçados</h3>
+            <div class="opcao-text">
+              <h3>Marcas</h3>
               <p>Gerencie as marcas disponíveis no formulário de abastecimento</p>
             </div>
-          </div>
-          <span class="count-badge">{{ store.marcas.length }} marcas</span>
+            <div class="opcao-meta">
+              <span class="opcao-badge">{{ store.marcas.length }} cadastradas</span>
+              <ChevronRight :size="20" class="opcao-arrow" />
+            </div>
+          </button>
+
+          <!-- Botão 2: Produtos Químicos -->
+          <button type="button" @click="cadastroAtivo = 'produtos'" class="btn-cadastro-opcao">
+            <div class="opcao-icon-wrap flask-glow">
+              <FlaskConical :size="24" />
+            </div>
+            <div class="opcao-text">
+              <h3>Produtos</h3>
+              <p>Cadastre insumos químicos com nome e valor unitário (R$)</p>
+            </div>
+            <div class="opcao-meta">
+              <span class="opcao-badge">{{ store.produtos.length }} cadastrados</span>
+              <ChevronRight :size="20" class="opcao-arrow" />
+            </div>
+          </button>
+
+          <!-- Botão 3: Células de Produção -->
+          <button type="button" @click="cadastroAtivo = 'celulas'" class="btn-cadastro-opcao">
+            <div class="opcao-icon-wrap building-glow">
+              <Building2 :size="24" />
+            </div>
+            <div class="opcao-text">
+              <h3>Células</h3>
+              <p>Gerencie as células e setores disponíveis na lista suspensa</p>
+            </div>
+            <div class="opcao-meta">
+              <span class="opcao-badge">{{ store.celulas.length }} cadastradas</span>
+              <ChevronRight :size="20" class="opcao-arrow" />
+            </div>
+          </button>
+
+          <!-- Botão 4: Backup & Segurança de Dados -->
+          <button type="button" @click="cadastroAtivo = 'backup'" class="btn-cadastro-opcao">
+            <div class="opcao-icon-wrap backup-glow">
+              <HardDrive :size="24" />
+            </div>
+            <div class="opcao-text">
+              <h3>Backup & Dados</h3>
+              <p>Exporte cópia de segurança em JSON ou restaure os dados do sistema</p>
+            </div>
+            <div class="opcao-meta">
+              <span class="opcao-badge">Segurança</span>
+              <ChevronRight :size="20" class="opcao-arrow" />
+            </div>
+          </button>
         </div>
+      </div>
 
-        <!-- Alerta Marca -->
-        <div v-if="feedbackMarca.msg" :class="feedbackMarca.tipo === 'sucesso' ? 'alert-success' : 'alert-danger'">
-          <CheckCircle2 v-if="feedbackMarca.tipo === 'sucesso'" :size="18" />
-          <AlertCircle v-else :size="18" />
-          <span>{{ feedbackMarca.msg }}</span>
-        </div>
+      <!-- 2. TELA DO CADASTRO ESCOLHIDO -->
+      <div v-else class="cadastro-screen-wrapper">
+        <!-- Barra Superior de Navegação -->
+        <div class="cadastro-nav-bar">
+          <button type="button" @click="voltarAoMenu" class="btn-back-menu">
+            <ArrowLeft :size="16" /> Voltar aos Cadastros
+          </button>
 
-        <!-- Form Adicionar Marca -->
-        <form @submit.prevent="salvarMarca" class="inline-add-form brand-form-grid">
-          <input
-            type="text"
-            v-model="novaMarca"
-            class="modern-input"
-            placeholder="Digite o nome da marca..."
-            required
-          />
-
-          <!-- Upload de Logo na Nova Marca -->
-          <input 
-            type="file" 
-            ref="fileInputNovaMarca" 
-            accept="image/*" 
-            @change="onFileChangeNovaMarca" 
-            style="display: none;" 
-          />
-
-          <div class="logo-field-wrapper">
-            <button 
-              type="button" 
-              class="btn-choose-logo" 
-              @click="fileInputNovaMarca && fileInputNovaMarca.click()"
-              :title="novaLogoPreview ? 'Trocar imagem selecionada' : 'Selecionar imagem da logo (PNG, JPG)'"
+          <!-- Abas para alternar rapidamente -->
+          <div class="cadastros-tab-buttons">
+            <button
+              type="button"
+              :class="['btn-tab-pill', { active: cadastroAtivo === 'marcas' }]"
+              @click="cadastroAtivo = 'marcas'"
             >
-              <Upload :size="15" />
-              <span>{{ novaLogoPreview ? 'Logo anexada' : 'Anexar Logo' }}</span>
+              <Tag :size="14" /> Marcas ({{ store.marcas.length }})
             </button>
 
-            <div v-if="novaLogoPreview" class="logo-preview-box">
-              <img :src="novaLogoPreview" alt="Prévia da logo" class="logo-preview-img" />
-              <button type="button" @click="limparNovaLogo" class="btn-clear-logo-preview" title="Remover imagem">
-                <X :size="12" />
-              </button>
-            </div>
+            <button
+              type="button"
+              :class="['btn-tab-pill', { active: cadastroAtivo === 'produtos' }]"
+              @click="cadastroAtivo = 'produtos'"
+            >
+              <FlaskConical :size="14" /> Produtos ({{ store.produtos.length }})
+            </button>
+
+            <button
+              type="button"
+              :class="['btn-tab-pill', { active: cadastroAtivo === 'celulas' }]"
+              @click="cadastroAtivo = 'celulas'"
+            >
+              <Building2 :size="14" /> Células ({{ store.celulas.length }})
+            </button>
+
+            <button
+              type="button"
+              :class="['btn-tab-pill', { active: cadastroAtivo === 'backup' }]"
+              @click="cadastroAtivo = 'backup'"
+            >
+              <HardDrive :size="14" /> Backup & Dados
+            </button>
           </div>
 
-          <button type="submit" class="btn-primary">
-            <Plus :size="16" /> Cadastrar Marca
-          </button>
-        </form>
+          <!-- Botões de Ação em Lote (Importar / Exportar) - Oculto na aba Backup -->
+          <div v-if="cadastroAtivo !== 'backup'" class="lote-nav-actions">
+            <button
+              type="button"
+              class="btn-nav-lote btn-nav-import"
+              @click="abrirModalImportacao(cadastroAtivo)"
+              title="Importar lista do computador ou colar do Excel"
+            >
+              <ClipboardPaste :size="14" />
+              <span>Importar / Colar</span>
+            </button>
 
-        <!-- Input Oculto para Trocar Logo de Marca Existente -->
-        <input 
-          type="file" 
-          ref="fileInputAlterarMarca" 
-          accept="image/*" 
-          @change="onFileChangeAlterarMarca" 
-          style="display: none;" 
-        />
+            <button
+              type="button"
+              class="btn-nav-lote btn-nav-export"
+              @click="exportarLista(cadastroAtivo)"
+              title="Exportar esta lista salva para arquivo Excel (.CSV)"
+            >
+              <Download :size="14" />
+              <span>Exportar (.CSV)</span>
+            </button>
+          </div>
+        </div>
 
-        <!-- Lista de Marcas -->
-        <div class="items-list-container">
-          <table class="items-table">
-            <thead>
-              <tr>
-                <th style="width: 80px;" class="text-center">Logo</th>
-                <th>Marca</th>
-                <th class="text-center">Lançamentos</th>
-                <th v-if="store.isAdmin" class="text-right">Ação</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-if="store.marcas.length === 0">
-                <td colspan="4" class="text-center text-muted" style="padding: 24px;">
-                  Nenhuma marca cadastrada. Utilize o campo acima para adicionar.
-                </td>
-              </tr>
-              <tr v-for="m in store.marcas" :key="m">
-                <td class="text-center">
-                  <div 
-                    class="brand-table-logo-wrap"
-                    :class="{ 'clickable-logo': store.isAdmin }"
-                    :title="store.isAdmin ? 'Clique para trocar a imagem da logo' : ''"
-                    @click="store.isAdmin && abrirUploadParaMarca(m)"
-                  >
-                    <div class="brand-table-logo">
-                      <BrandLogo :marca="m" />
+        <!-- Tela: Marcas de Calçados -->
+        <div v-if="cadastroAtivo === 'marcas'" class="modern-card cadastro-card">
+          <div class="card-header">
+            <div class="card-icon-title">
+              <div class="icon-wrap tag-glow">
+                <Tag :size="20" />
+              </div>
+              <div>
+                <h3>Marcas de Calçados</h3>
+                <p>Gerencie as marcas disponíveis no formulário de abastecimento</p>
+              </div>
+            </div>
+            <span class="count-badge">{{ store.marcas.length }} marcas</span>
+          </div>
+
+          <!-- Alerta Marca -->
+          <div
+            v-if="feedbackMarca.msg"
+            :class="feedbackMarca.tipo === 'sucesso' ? 'alert-success' : 'alert-danger'"
+          >
+            <CheckCircle2 v-if="feedbackMarca.tipo === 'sucesso'" :size="18" />
+            <AlertCircle v-else :size="18" />
+            <span>{{ feedbackMarca.msg }}</span>
+          </div>
+
+          <!-- Form Adicionar Marca -->
+          <form @submit.prevent="salvarMarca" class="inline-add-form brand-form-grid">
+            <input
+              type="text"
+              v-model="novaMarca"
+              class="modern-input"
+              placeholder="Digite o nome da marca..."
+              required
+            />
+
+            <!-- Upload de Logo na Nova Marca -->
+            <input
+              type="file"
+              ref="fileInputNovaMarca"
+              accept="image/*"
+              @change="onFileChangeNovaMarca"
+              style="display: none"
+            />
+
+            <div class="logo-field-wrapper">
+              <button
+                type="button"
+                class="btn-choose-logo"
+                @click="fileInputNovaMarca && fileInputNovaMarca.click()"
+                :title="
+                  novaLogoPreview
+                    ? 'Trocar imagem selecionada'
+                    : 'Selecionar imagem da logo (PNG, JPG)'
+                "
+              >
+                <Upload :size="15" />
+                <span>{{ novaLogoPreview ? 'Logo anexada' : 'Anexar Logo' }}</span>
+              </button>
+
+              <div v-if="novaLogoPreview" class="logo-preview-box">
+                <img :src="novaLogoPreview" alt="Prévia da logo" class="logo-preview-img" />
+                <button
+                  type="button"
+                  @click="limparNovaLogo"
+                  class="btn-clear-logo-preview"
+                  title="Remover imagem"
+                >
+                  <X :size="12" />
+                </button>
+              </div>
+            </div>
+
+            <button type="submit" class="btn-primary"><Plus :size="16" /> Cadastrar Marca</button>
+          </form>
+
+          <!-- Input Oculto para Trocar Logo de Marca Existente -->
+          <input
+            type="file"
+            ref="fileInputAlterarMarca"
+            accept="image/*"
+            @change="onFileChangeAlterarMarca"
+            style="display: none"
+          />
+
+          <!-- Lista de Marcas -->
+          <div class="items-list-container">
+            <table class="items-table">
+              <thead>
+                <tr>
+                  <th style="width: 80px" class="text-center">Logo</th>
+                  <th>Marca</th>
+                  <th class="text-center">Lançamentos</th>
+                  <th v-if="store.isAdmin" class="text-right">Ação</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-if="store.marcas.length === 0">
+                  <td colspan="4" class="text-center text-muted" style="padding: 24px">
+                    Nenhuma marca cadastrada. Utilize o campo acima para adicionar.
+                  </td>
+                </tr>
+                <tr v-for="m in store.marcas" :key="m">
+                  <td class="text-center">
+                    <div
+                      class="brand-table-logo-wrap"
+                      :class="{ 'clickable-logo': store.isAdmin }"
+                      :title="store.isAdmin ? 'Clique para trocar a imagem da logo' : ''"
+                      @click="store.isAdmin && abrirUploadParaMarca(m)"
+                    >
+                      <div class="brand-table-logo">
+                        <BrandLogo :marca="m" />
+                      </div>
+                      <span v-if="store.isAdmin" class="logo-change-badge" title="Trocar imagem">
+                        <Camera :size="10" />
+                      </span>
                     </div>
-                    <span v-if="store.isAdmin" class="logo-change-badge" title="Trocar imagem">
-                      <Camera :size="10" />
-                    </span>
-                  </div>
-                </td>
-                <td>
-                  <div class="brand-name-wrap">
-                    <span class="brand-item-badge">{{ m }}</span>
-                    <span v-if="temLogoPersonalizada(m)" class="custom-logo-pill" title="Logo personalizada ativa">
-                      Personalizada
-                    </span>
-                  </div>
-                </td>
-                <td class="text-center text-muted">
-                  {{ contarUsosMarca(m) }} reg.
-                </td>
-                <td v-if="store.isAdmin" class="text-right">
-                  <div class="brand-actions-group">
-                    <button 
-                      type="button" 
-                      @click="abrirUploadParaMarca(m)" 
-                      class="btn-icon-brand-upload"
-                      title="Enviar / Trocar Logo"
-                    >
-                      <ImageIcon :size="16" />
-                    </button>
-                    <button 
-                      v-if="temLogoPersonalizada(m)"
-                      type="button" 
-                      @click="restaurarLogoMarca(m)" 
-                      class="btn-icon-brand-restore"
-                      title="Restaurar logo padrão"
-                    >
-                      <RotateCcw :size="15" />
-                    </button>
-                    <button 
-                      type="button" 
-                      @click="excluirMarca(m)" 
+                  </td>
+                  <td>
+                    <div class="brand-name-wrap">
+                      <span class="brand-item-badge">{{ m }}</span>
+                      <span
+                        v-if="temLogoPersonalizada(m)"
+                        class="custom-logo-pill"
+                        title="Logo personalizada ativa"
+                      >
+                        Personalizada
+                      </span>
+                    </div>
+                  </td>
+                  <td class="text-center text-muted">{{ contarUsosMarca(m) }} reg.</td>
+                  <td v-if="store.isAdmin" class="text-right">
+                    <div class="brand-actions-group">
+                      <button
+                        type="button"
+                        @click="abrirUploadParaMarca(m)"
+                        class="btn-icon-brand-upload"
+                        title="Enviar / Trocar Logo"
+                      >
+                        <ImageIcon :size="16" />
+                      </button>
+                      <button
+                        v-if="temLogoPersonalizada(m)"
+                        type="button"
+                        @click="restaurarLogoMarca(m)"
+                        class="btn-icon-brand-restore"
+                        title="Restaurar logo padrão"
+                      >
+                        <RotateCcw :size="15" />
+                      </button>
+                      <button
+                        type="button"
+                        @click="excluirMarca(m)"
+                        class="btn-icon-danger"
+                        title="Excluir marca"
+                      >
+                        <Trash2 :size="16" />
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Tela: Produtos Químicos -->
+        <div v-else-if="cadastroAtivo === 'produtos'" class="modern-card cadastro-card">
+          <div class="card-header">
+            <div class="card-icon-title">
+              <div class="icon-wrap flask-glow">
+                <FlaskConical :size="20" />
+              </div>
+              <div>
+                <h3>Produtos Químicos</h3>
+                <p>Cadastre insumos com nome e valor unitário (R$)</p>
+              </div>
+            </div>
+            <span class="count-badge">{{ store.produtos.length }} produtos</span>
+          </div>
+
+          <!-- Alerta Produto -->
+          <div
+            v-if="feedbackProduto.msg"
+            :class="feedbackProduto.tipo === 'sucesso' ? 'alert-success' : 'alert-danger'"
+          >
+            <CheckCircle2 v-if="feedbackProduto.tipo === 'sucesso'" :size="18" />
+            <AlertCircle v-else :size="18" />
+            <span>{{ feedbackProduto.msg }}</span>
+          </div>
+
+          <!-- Form Adicionar Produto -->
+          <form @submit.prevent="salvarProduto" class="product-add-form">
+            <div class="form-grid-prod">
+              <div class="input-group">
+                <label>Nome do Produto</label>
+                <input
+                  type="text"
+                  v-model="novoProduto.nome"
+                  class="modern-input"
+                  placeholder="Nome do produto químico..."
+                  required
+                />
+              </div>
+
+              <div class="input-group">
+                <label>Valor do Produto (R$)</label>
+                <div class="input-with-prefix">
+                  <span class="prefix">R$</span>
+                  <input
+                    type="number"
+                    v-model="novoProduto.valor"
+                    class="modern-input pl-currency"
+                    step="0.01"
+                    min="0"
+                    placeholder="0.00"
+                    required
+                  />
+                </div>
+              </div>
+            </div>
+
+            <button type="submit" class="btn-primary btn-add-full">
+              <Plus :size="16" /> Cadastrar Produto Químico
+            </button>
+          </form>
+
+          <!-- Lista de Produtos -->
+          <div class="items-list-container">
+            <table class="items-table">
+              <thead>
+                <tr>
+                  <th>Produto</th>
+                  <th class="text-right">Valor Unitário</th>
+                  <th v-if="store.isAdmin" class="text-right">Ação</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-if="store.produtos.length === 0">
+                  <td colspan="3" class="text-center text-muted" style="padding: 24px">
+                    Nenhum produto químico cadastrado. Utilize o formulário acima para adicionar.
+                  </td>
+                </tr>
+                <tr v-for="p in store.produtos" :key="p.id">
+                  <td class="font-medium">
+                    {{ p.nome }}
+                    <span class="sub-uses">{{ contarUsosProduto(p.nome) }} abastecimentos</span>
+                  </td>
+                  <td class="text-right font-bold text-primary">
+                    {{ formatarMoeda(p.valor) }}
+                  </td>
+                  <td v-if="store.isAdmin" class="text-right">
+                    <button
+                      type="button"
+                      @click="excluirProduto(p.id, p.nome)"
                       class="btn-icon-danger"
-                      title="Excluir marca"
+                      title="Excluir produto"
                     >
                       <Trash2 :size="16" />
                     </button>
-                  </div>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-
-      <!-- Tela: Produtos Químicos -->
-      <div v-else-if="cadastroAtivo === 'produtos'" class="modern-card cadastro-card">
-        <div class="card-header">
-          <div class="card-icon-title">
-            <div class="icon-wrap flask-glow">
-              <FlaskConical :size="20" />
-            </div>
-            <div>
-              <h3>Produtos Químicos</h3>
-              <p>Cadastre insumos com nome e valor unitário (R$)</p>
-            </div>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
           </div>
-          <span class="count-badge">{{ store.produtos.length }} produtos</span>
         </div>
 
-        <!-- Alerta Produto -->
-        <div v-if="feedbackProduto.msg" :class="feedbackProduto.tipo === 'sucesso' ? 'alert-success' : 'alert-danger'">
-          <CheckCircle2 v-if="feedbackProduto.tipo === 'sucesso'" :size="18" />
-          <AlertCircle v-else :size="18" />
-          <span>{{ feedbackProduto.msg }}</span>
-        </div>
-
-        <!-- Form Adicionar Produto -->
-        <form @submit.prevent="salvarProduto" class="product-add-form">
-          <div class="form-grid-prod">
-            <div class="input-group">
-              <label>Nome do Produto</label>
-              <input
-                type="text"
-                v-model="novoProduto.nome"
-                class="modern-input"
-                placeholder="Nome do produto químico..."
-                required
-              />
+        <!-- Tela: Células de Produção -->
+        <div v-else-if="cadastroAtivo === 'celulas'" class="modern-card cadastro-card">
+          <div class="card-header">
+            <div class="card-icon-title">
+              <div class="icon-wrap building-glow">
+                <Building2 :size="20" />
+              </div>
+              <div>
+                <h3>Células de Produção</h3>
+                <p>Gerencie as células e setores disponíveis na lista suspensa</p>
+              </div>
             </div>
+            <span class="count-badge">{{ store.celulas.length }} células</span>
+          </div>
 
-            <div class="input-group">
-              <label>Valor do Produto (R$)</label>
-              <div class="input-with-prefix">
-                <span class="prefix">R$</span>
-                <input
-                  type="number"
-                  v-model="novoProduto.valor"
-                  class="modern-input pl-currency"
-                  step="0.01"
-                  min="0"
-                  placeholder="0.00"
-                  required
-                />
+          <!-- Alerta Célula -->
+          <div
+            v-if="feedbackCelula.msg"
+            :class="feedbackCelula.tipo === 'sucesso' ? 'alert-success' : 'alert-danger'"
+          >
+            <CheckCircle2 v-if="feedbackCelula.tipo === 'sucesso'" :size="18" />
+            <AlertCircle v-else :size="18" />
+            <span>{{ feedbackCelula.msg }}</span>
+          </div>
+
+          <!-- Form Adicionar Célula -->
+          <form @submit.prevent="salvarCelula" class="inline-add-form">
+            <input
+              type="text"
+              v-model="novaCelula"
+              class="modern-input uppercase-input"
+              placeholder="Nome da célula de produção..."
+              required
+              @input="novaCelula = novaCelula.toUpperCase()"
+            />
+            <button type="submit" class="btn-primary btn-emerald">
+              <Plus :size="16" /> Cadastrar Célula
+            </button>
+          </form>
+
+          <!-- Lista de Células -->
+          <div class="items-list-container">
+            <table class="items-table">
+              <thead>
+                <tr>
+                  <th>Célula de Produção</th>
+                  <th class="text-center">Lançamentos</th>
+                  <th v-if="store.isAdmin" class="text-right">Ação</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-if="store.celulas.length === 0">
+                  <td colspan="3" class="text-center text-muted" style="padding: 24px">
+                    Nenhuma célula de produção cadastrada. Utilize o campo acima para adicionar.
+                  </td>
+                </tr>
+                <tr v-for="c in store.celulas" :key="c">
+                  <td>
+                    <span class="brand-item-badge cell-item-badge">{{ c }}</span>
+                  </td>
+                  <td class="text-center text-muted">{{ contarUsosCelula(c) }} reg.</td>
+                  <td v-if="store.isAdmin" class="text-right">
+                    <button
+                      type="button"
+                      @click="excluirCelula(c)"
+                      class="btn-icon-danger"
+                      title="Excluir célula"
+                    >
+                      <Trash2 :size="16" />
+                    </button>
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <!-- Tela: Backup e Restauração de Dados -->
+        <div v-else-if="cadastroAtivo === 'backup'" class="modern-card cadastro-card">
+          <div class="card-header">
+            <div class="card-icon-title">
+              <div class="icon-wrap backup-glow">
+                <HardDrive :size="20" />
+              </div>
+              <div>
+                <h3>Backup & Segurança de Dados</h3>
+                <p>
+                  Exporte uma cópia completa de segurança ou restaure seus dados a partir de um
+                  arquivo JSON
+                </p>
               </div>
             </div>
           </div>
 
-          <button type="submit" class="btn-primary btn-add-full">
-            <Plus :size="16" /> Cadastrar Produto Químico
-          </button>
-        </form>
+          <div class="backup-section-content">
+            <div class="backup-stats-grid">
+              <div class="backup-stat-item">
+                <span class="stat-num">{{ store.marcas.length }}</span>
+                <span class="stat-desc">Marcas</span>
+              </div>
+              <div class="backup-stat-item">
+                <span class="stat-num">{{ store.produtos.length }}</span>
+                <span class="stat-desc">Produtos Químicos</span>
+              </div>
+              <div class="backup-stat-item">
+                <span class="stat-num">{{ store.celulas.length }}</span>
+                <span class="stat-desc">Células de Produção</span>
+              </div>
+              <div class="backup-stat-item">
+                <span class="stat-num">{{ store.registros.length }}</span>
+                <span class="stat-desc">Lançamentos Históricos</span>
+              </div>
+            </div>
 
-        <!-- Lista de Produtos -->
-        <div class="items-list-container">
-          <table class="items-table">
-            <thead>
-              <tr>
-                <th>Produto</th>
-                <th class="text-right">Valor Unitário</th>
-                <th v-if="store.isAdmin" class="text-right">Ação</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-if="store.produtos.length === 0">
-                <td colspan="3" class="text-center text-muted" style="padding: 24px;">
-                  Nenhum produto químico cadastrado. Utilize o formulário acima para adicionar.
-                </td>
-              </tr>
-              <tr v-for="p in store.produtos" :key="p.id">
-                <td class="font-medium">
-                  {{ p.nome }}
-                  <span class="sub-uses">{{ contarUsosProduto(p.nome) }} abastecimentos</span>
-                </td>
-                <td class="text-right font-bold text-primary">
-                  {{ formatarMoeda(p.valor) }}
-                </td>
-                <td v-if="store.isAdmin" class="text-right">
-                  <button 
-                    type="button" 
-                    @click="excluirProduto(p.id, p.nome)" 
-                    class="btn-icon-danger"
-                    title="Excluir produto"
-                  >
-                    <Trash2 :size="16" />
-                  </button>
-                </td>
-              </tr>
-            </tbody>
-          </table>
+            <div class="backup-actions-grid">
+              <!-- Card Exportar -->
+              <div class="backup-action-card">
+                <div class="action-card-header">
+                  <div class="icon-circle circle-export">
+                    <Download :size="20" />
+                  </div>
+                  <div>
+                    <h4>Exportar Backup Completo</h4>
+                    <span class="action-card-sub">Download imediato de todos os dados</span>
+                  </div>
+                </div>
+                <p class="action-card-desc">
+                  Gere um arquivo <strong>.json</strong> estruturado contendo todos os cadastros
+                  (marcas, produtos, células, administradores) e todo o histórico de lançamentos
+                  para manter uma cópia de segurança segura.
+                </p>
+                <button
+                  type="button"
+                  @click="store.exportarBackupCompleto"
+                  class="btn-primary btn-backup-action"
+                >
+                  <Download :size="16" /> Baixar Backup (.JSON)
+                </button>
+              </div>
+
+              <!-- Card Restaurar -->
+              <div class="backup-action-card">
+                <div class="action-card-header">
+                  <div class="icon-circle circle-restore">
+                    <Upload :size="20" />
+                  </div>
+                  <div>
+                    <h4>Restaurar Backup</h4>
+                    <span class="action-card-sub">Carregar dados a partir de arquivo JSON</span>
+                  </div>
+                </div>
+                <p class="action-card-desc">
+                  Selecione um arquivo <strong>.json</strong> exportado anteriormente pelo sistema
+                  para recuperar e atualizar os dados no navegador deste dispositivo com confirmação
+                  prévia.
+                </p>
+                <input
+                  ref="fileInputBackupRef"
+                  type="file"
+                  accept=".json,application/json"
+                  style="display: none"
+                  @change="onArquivoBackupSelecionado"
+                />
+                <button
+                  type="button"
+                  @click="abrirSeletorArquivoBackup"
+                  class="btn-secondary btn-backup-action"
+                >
+                  <Upload :size="16" /> Carregar Arquivo de Backup
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
-      <!-- Tela: Células de Produção -->
-      <div v-else-if="cadastroAtivo === 'celulas'" class="modern-card cadastro-card">
-        <div class="card-header">
-          <div class="card-icon-title">
-            <div class="icon-wrap building-glow">
-              <Building2 :size="20" />
-            </div>
-            <div>
-              <h3>Células de Produção</h3>
-              <p>Gerencie as células e setores disponíveis na lista suspensa</p>
-            </div>
-          </div>
-          <span class="count-badge">{{ store.celulas.length }} células</span>
-        </div>
-
-        <!-- Alerta Célula -->
-        <div v-if="feedbackCelula.msg" :class="feedbackCelula.tipo === 'sucesso' ? 'alert-success' : 'alert-danger'">
-          <CheckCircle2 v-if="feedbackCelula.tipo === 'sucesso'" :size="18" />
-          <AlertCircle v-else :size="18" />
-          <span>{{ feedbackCelula.msg }}</span>
-        </div>
-
-        <!-- Form Adicionar Célula -->
-        <form @submit.prevent="salvarCelula" class="inline-add-form">
-          <input
-            type="text"
-            v-model="novaCelula"
-            class="modern-input uppercase-input"
-            placeholder="Nome da célula de produção..."
-            required
-            @input="novaCelula = novaCelula.toUpperCase()"
-          />
-          <button type="submit" class="btn-primary btn-emerald">
-            <Plus :size="16" /> Cadastrar Célula
-          </button>
-        </form>
-
-        <!-- Lista de Células -->
-        <div class="items-list-container">
-          <table class="items-table">
-            <thead>
-              <tr>
-                <th>Célula de Produção</th>
-                <th class="text-center">Lançamentos</th>
-                <th v-if="store.isAdmin" class="text-right">Ação</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-if="store.celulas.length === 0">
-                <td colspan="3" class="text-center text-muted" style="padding: 24px;">
-                  Nenhuma célula de produção cadastrada. Utilize o campo acima para adicionar.
-                </td>
-              </tr>
-              <tr v-for="c in store.celulas" :key="c">
-                <td>
-                  <span class="brand-item-badge cell-item-badge">{{ c }}</span>
-                </td>
-                <td class="text-center text-muted">
-                  {{ contarUsosCelula(c) }} reg.
-                </td>
-                <td v-if="store.isAdmin" class="text-right">
-                  <button 
-                    type="button" 
-                    @click="excluirCelula(c)" 
-                    class="btn-icon-danger"
-                    title="Excluir célula"
-                  >
-                    <Trash2 :size="16" />
-                  </button>
-                </td>
-              </tr>
-            </tbody>
-          </table>
-        </div>
-      </div>
-    </div>
-
-    <!-- MODAL DE IMPORTAÇÃO EM LOTE / COPIAR E COLAR -->
-    <Teleport to="body">
-      <Transition name="fade">
-        <div 
-          v-if="modalImportacaoAberto" 
-          class="lote-modal-backdrop" 
-          @click.self="fecharModalImportacao"
-        >
-          <div class="modal-content modal-lote-dialog">
-        <!-- Cabeçalho do Modal -->
-        <div class="modal-lote-header">
-          <div class="modal-lote-title-wrap">
-            <div class="lote-modal-icon">
-              <ClipboardPaste :size="22" />
-            </div>
-            <div>
-              <h3>Importar Lista • {{ tipoImportacao === 'marcas' ? 'Marcas de Calçados' : tipoImportacao === 'produtos' ? 'Produtos Químicos' : 'Células de Produção' }}</h3>
-              <p>Cole uma lista do Excel / Bloco de Notas ou selecione um arquivo do computador</p>
-            </div>
-          </div>
-          <button type="button" class="btn-close-modal" @click="fecharModalImportacao" title="Fechar">
-            <X :size="18" />
-          </button>
-        </div>
-
-        <!-- Seletor de Tipo -->
-        <div class="modal-lote-type-selector">
-          <button 
-            type="button" 
-            :class="['btn-lote-type', { active: tipoImportacao === 'marcas' }]" 
-            @click="tipoImportacao = 'marcas'"
+      <!-- MODAL DE IMPORTAÇÃO EM LOTE / COPIAR E COLAR -->
+      <Teleport to="body">
+        <Transition name="fade">
+          <div
+            v-if="modalImportacaoAberto"
+            class="lote-modal-backdrop"
+            @click.self="fecharModalImportacao"
           >
-            <Tag :size="14" /> Marcas
-          </button>
-          <button 
-            type="button" 
-            :class="['btn-lote-type', { active: tipoImportacao === 'produtos' }]" 
-            @click="tipoImportacao = 'produtos'"
-          >
-            <FlaskConical :size="14" /> Produtos
-          </button>
-          <button 
-            type="button" 
-            :class="['btn-lote-type', { active: tipoImportacao === 'celulas' }]" 
-            @click="tipoImportacao = 'celulas'"
-          >
-            <Building2 :size="14" /> Células
-          </button>
-        </div>
+            <div class="modal-content modal-lote-dialog">
+              <!-- Cabeçalho do Modal -->
+              <div class="modal-lote-header">
+                <div class="modal-lote-title-wrap">
+                  <div class="lote-modal-icon">
+                    <ClipboardPaste :size="22" />
+                  </div>
+                  <div>
+                    <h3>
+                      Importar Lista •
+                      {{
+                        tipoImportacao === 'marcas'
+                          ? 'Marcas de Calçados'
+                          : tipoImportacao === 'produtos'
+                            ? 'Produtos Químicos'
+                            : 'Células de Produção'
+                      }}
+                    </h3>
+                    <p>
+                      Cole uma lista do Excel / Bloco de Notas ou selecione um arquivo do computador
+                    </p>
+                  </div>
+                </div>
+                <button
+                  type="button"
+                  class="btn-close-modal"
+                  @click="fecharModalImportacao"
+                  title="Fechar"
+                >
+                  <X :size="18" />
+                </button>
+              </div>
 
-        <!-- Barra de Ações Rápidas de Entrada -->
-        <div class="lote-input-toolbar">
-          <button type="button" class="btn-toolbar-action" @click="colarDaAreaTransferencia">
-            <ClipboardPaste :size="15" /> Colar do Teclado / Clipboard
-          </button>
+              <!-- Seletor de Tipo -->
+              <div class="modal-lote-type-selector">
+                <button
+                  type="button"
+                  :class="['btn-lote-type', { active: tipoImportacao === 'marcas' }]"
+                  @click="tipoImportacao = 'marcas'"
+                >
+                  <Tag :size="14" /> Marcas
+                </button>
+                <button
+                  type="button"
+                  :class="['btn-lote-type', { active: tipoImportacao === 'produtos' }]"
+                  @click="tipoImportacao = 'produtos'"
+                >
+                  <FlaskConical :size="14" /> Produtos
+                </button>
+                <button
+                  type="button"
+                  :class="['btn-lote-type', { active: tipoImportacao === 'celulas' }]"
+                  @click="tipoImportacao = 'celulas'"
+                >
+                  <Building2 :size="14" /> Células
+                </button>
+              </div>
 
-          <label class="btn-toolbar-action btn-upload-file-label">
-            <FileUp :size="15" /> Escolher Arquivo (.csv, .txt)
-            <input 
-              type="file" 
-              ref="inputArquivoLote" 
-              accept=".csv, .txt" 
-              @change="onArquivoLoteSelecionado" 
-              style="display: none;" 
-            />
-          </label>
+              <!-- Barra de Ações Rápidas de Entrada -->
+              <div class="lote-input-toolbar">
+                <button type="button" class="btn-toolbar-action" @click="colarDaAreaTransferencia">
+                  <ClipboardPaste :size="15" /> Colar do Teclado / Clipboard
+                </button>
 
-          <button 
-            v-if="textoColado" 
-            type="button" 
-            class="btn-toolbar-clear" 
-            @click="textoColado = ''; nomeArquivoCarregado = ''"
-          >
-            <X :size="14" /> Limpar
-          </button>
-        </div>
+                <label class="btn-toolbar-action btn-upload-file-label">
+                  <FileUp :size="15" /> Escolher Arquivo (.csv, .txt)
+                  <input
+                    type="file"
+                    ref="inputArquivoLote"
+                    accept=".csv, .txt"
+                    @change="onArquivoLoteSelecionado"
+                    style="display: none"
+                  />
+                </label>
 
-        <div v-if="nomeArquivoCarregado" class="loaded-file-badge">
-          <FileSpreadsheet :size="14" />
-          <span>Arquivo carregado: <strong>{{ nomeArquivoCarregado }}</strong></span>
-        </div>
+                <button
+                  v-if="textoColado"
+                  type="button"
+                  class="btn-toolbar-clear"
+                  @click="limparTextoLote"
+                >
+                  <X :size="14" /> Limpar
+                </button>
+              </div>
 
-        <!-- Área de Texto para Digitar / Colar -->
-        <div class="lote-textarea-wrapper">
-          <textarea
-            v-model="textoColado"
-            class="lote-textarea"
-            rows="6"
-            :placeholder="tipoImportacao === 'produtos' 
-              ? 'Cole as linhas aqui...\nExemplo:\nADESIVO POLIURETANO \t 45,90\nPRIMER UV \t 32,00\nLIMPADOR \t 18,50'
-              : 'Cole as linhas aqui (uma por linha)...\nExemplo:\n' + (tipoImportacao === 'marcas' ? 'NIKE\nFILA\nUMBRO\nADIDAS' : 'CÉLULA 01\nCÉLULA 02\nCÉLULA 03')"
-          ></textarea>
-        </div>
+              <div v-if="nomeArquivoCarregado" class="loaded-file-badge">
+                <FileSpreadsheet :size="14" />
+                <span
+                  >Arquivo carregado: <strong>{{ nomeArquivoCarregado }}</strong></span
+                >
+              </div>
 
-        <!-- Painel de Pré-visualização e Estatísticas -->
-        <div v-if="itensDetectados.length > 0" class="lote-preview-panel">
-          <div class="lote-stats-summary">
-            <span class="stat-pill total">
-              <strong>{{ estatisticasImportacao.total }}</strong> itens detectados
-            </span>
-            <span class="stat-pill novos">
-              <strong>{{ estatisticasImportacao.novos }}</strong> novos para cadastrar
-            </span>
-            <span v-if="estatisticasImportacao.duplicados > 0" class="stat-pill duplicados">
-              <strong>{{ estatisticasImportacao.duplicados }}</strong> já cadastrados (ignorados)
-            </span>
-          </div>
+              <!-- Área de Texto para Digitar / Colar -->
+              <div class="lote-textarea-wrapper">
+                <textarea
+                  v-model="textoColado"
+                  class="lote-textarea"
+                  rows="6"
+                  :placeholder="
+                    tipoImportacao === 'produtos'
+                      ? 'Cole as linhas aqui...\nExemplo:\nADESIVO POLIURETANO \t 45,90\nPRIMER UV \t 32,00\nLIMPADOR \t 18,50'
+                      : 'Cole as linhas aqui (uma por linha)...\nExemplo:\n' +
+                        (tipoImportacao === 'marcas'
+                          ? 'NIKE\nFILA\nUMBRO\nADIDAS'
+                          : 'CÉLULA 01\nCÉLULA 02\nCÉLULA 03')
+                  "
+                ></textarea>
+              </div>
 
-          <!-- Prévia dos primeiros itens -->
-          <div class="lote-preview-list">
-            <span class="preview-title">Prévia dos itens encontrados:</span>
-            <div class="preview-tags">
-              <span 
-                v-for="(item, idx) in itensDetectados.slice(0, 12)" 
-                :key="idx" 
-                class="preview-tag-item"
-              >
-                {{ tipoImportacao === 'produtos' ? `${item.nome} (${formatarMoeda(item.valor)})` : item }}
-              </span>
-              <span v-if="itensDetectados.length > 12" class="preview-more-count">
-                +{{ itensDetectados.length - 12 }} itens...
-              </span>
+              <!-- Painel de Pré-visualização e Estatísticas -->
+              <div v-if="itensDetectados.length > 0" class="lote-preview-panel">
+                <div class="lote-stats-summary">
+                  <span class="stat-pill total">
+                    <strong>{{ estatisticasImportacao.total }}</strong> itens detectados
+                  </span>
+                  <span class="stat-pill novos">
+                    <strong>{{ estatisticasImportacao.novos }}</strong> novos para cadastrar
+                  </span>
+                  <span v-if="estatisticasImportacao.duplicados > 0" class="stat-pill duplicados">
+                    <strong>{{ estatisticasImportacao.duplicados }}</strong> já cadastrados
+                    (ignorados)
+                  </span>
+                </div>
+
+                <!-- Prévia dos primeiros itens -->
+                <div class="lote-preview-list">
+                  <span class="preview-title">Prévia dos itens encontrados:</span>
+                  <div class="preview-tags">
+                    <span
+                      v-for="(item, idx) in itensDetectados.slice(0, 12)"
+                      :key="idx"
+                      class="preview-tag-item"
+                    >
+                      {{
+                        tipoImportacao === 'produtos'
+                          ? `${item.nome} (${formatarMoeda(item.valor)})`
+                          : item
+                      }}
+                    </span>
+                    <span v-if="itensDetectados.length > 12" class="preview-more-count">
+                      +{{ itensDetectados.length - 12 }} itens...
+                    </span>
+                  </div>
+                </div>
+
+                <!-- Opção de Substituição -->
+                <div class="lote-mode-option">
+                  <label class="checkbox-label">
+                    <input type="checkbox" v-model="modoSubstituicao" />
+                    <span
+                      >Substituir lista existente inteira (se desmarcado, apenas adiciona os novos
+                      mantendo os atuais)</span
+                    >
+                  </label>
+                </div>
+              </div>
+
+              <!-- Rodapé do Modal -->
+              <div class="modal-lote-footer">
+                <button type="button" class="btn-cancel" @click="fecharModalImportacao">
+                  Cancelar
+                </button>
+
+                <button
+                  type="button"
+                  class="btn-primary btn-confirm-import"
+                  :disabled="itensDetectados.length === 0"
+                  @click="executarImportacao"
+                >
+                  <Check :size="16" />
+                  <span>Confirmar e Importar ({{ estatisticasImportacao.novos }} novos)</span>
+                </button>
+              </div>
             </div>
           </div>
-
-          <!-- Opção de Substituição -->
-          <div class="lote-mode-option">
-            <label class="checkbox-label">
-              <input type="checkbox" v-model="modoSubstituicao" />
-              <span>Substituir lista existente inteira (se desmarcado, apenas adiciona os novos mantendo os atuais)</span>
-            </label>
-          </div>
-        </div>
-
-        <!-- Rodapé do Modal -->
-        <div class="modal-lote-footer">
-          <button type="button" class="btn-cancel" @click="fecharModalImportacao">
-            Cancelar
-          </button>
-          
-          <button 
-            type="button" 
-            class="btn-primary btn-confirm-import" 
-            :disabled="itensDetectados.length === 0"
-            @click="executarImportacao"
-          >
-            <Check :size="16" />
-            <span>Confirmar e Importar ({{ estatisticasImportacao.novos }} novos)</span>
-          </button>
-          </div>
-        </div>
-      </div>
-    </Transition>
-  </Teleport>
-  </template>
-</div>
+        </Transition>
+      </Teleport>
+    </template>
+  </div>
 </template>
 
 <style scoped>
@@ -2251,5 +2474,131 @@ const exportarLista = (tipo) => {
   display: inline-flex;
   align-items: center;
   gap: 8px;
+}
+
+/* ====================================================
+   ESTILOS DE BACKUP & SEGURANÇA DE DADOS
+   ==================================================== */
+.backup-glow {
+  background: #ede9fe;
+  color: #7c3aed;
+}
+
+.backup-section-content {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.backup-stats-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+  gap: 16px;
+  background: #f8fafc;
+  padding: 18px;
+  border-radius: 12px;
+  border: 1px solid #e2e8f0;
+}
+
+.backup-stat-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  text-align: center;
+  gap: 4px;
+}
+
+.backup-stat-item .stat-num {
+  font-size: 1.6rem;
+  font-weight: 800;
+  color: var(--primary);
+  line-height: 1.2;
+}
+
+.backup-stat-item .stat-desc {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.backup-actions-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+  gap: 20px;
+}
+
+.backup-action-card {
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  background: #ffffff;
+  border: 1px solid #e2e8f0;
+  border-radius: 12px;
+  padding: 24px;
+  gap: 16px;
+  transition: all 0.2s ease;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
+.backup-action-card:hover {
+  border-color: #cbd5e1;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.06);
+}
+
+.action-card-header {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.action-card-header h4 {
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--text-main);
+  margin: 0;
+}
+
+.action-card-sub {
+  font-size: 0.78rem;
+  color: var(--text-muted);
+}
+
+.icon-circle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 42px;
+  height: 42px;
+  border-radius: 10px;
+  flex-shrink: 0;
+}
+
+.circle-export {
+  background: #eef2ff;
+  color: var(--primary);
+}
+
+.circle-restore {
+  background: #fef3c7;
+  color: #d97706;
+}
+
+.action-card-desc {
+  font-size: 0.88rem;
+  color: #475569;
+  line-height: 1.5;
+  margin: 0;
+  flex-grow: 1;
+}
+
+.btn-backup-action {
+  width: 100%;
+  justify-content: center;
+  padding: 12px 18px;
+  font-size: 0.92rem;
+  font-weight: 600;
+  border-radius: 8px;
 }
 </style>

@@ -3,7 +3,10 @@ import { defineStore } from 'pinia'
 import { ref, computed, watch } from 'vue'
 
 // Limpeza única dos dados padrões mockados anteriores para iniciar o app totalmente limpo
-if (typeof window !== 'undefined' && localStorage.getItem('controlabast_limpar_padroes_v1') !== 'true') {
+if (
+  typeof window !== 'undefined' &&
+  localStorage.getItem('controlabast_limpar_padroes_v1') !== 'true'
+) {
   localStorage.removeItem('controlabast_marcas')
   localStorage.removeItem('controlabast_produtos')
   localStorage.removeItem('controlabast_celulas')
@@ -25,8 +28,8 @@ const ADMINS_PADRAO = [
     nome: 'Rafael Oliveira da Silva',
     perfil: 'Master',
     isMaster: true,
-    dataCadastro: '23/11/2026'
-  }
+    dataCadastro: '23/11/2026',
+  },
 ]
 
 export const useRegistrosStore = defineStore('registros', () => {
@@ -39,7 +42,7 @@ export const useRegistrosStore = defineStore('registros', () => {
     (novas) => {
       localStorage.setItem('controlabast_marcas', JSON.stringify(novas))
     },
-    { deep: true }
+    { deep: true },
   )
 
   const adicionarMarca = (nome) => {
@@ -53,7 +56,7 @@ export const useRegistrosStore = defineStore('registros', () => {
   }
 
   const removerMarca = (nome) => {
-    marcas.value = marcas.value.filter(m => m !== nome)
+    marcas.value = marcas.value.filter((m) => m !== nome)
     if (logosMarcas.value[nome.toUpperCase()]) {
       delete logosMarcas.value[nome.toUpperCase()]
       localStorage.setItem('controlabast_logos_marcas', JSON.stringify(logosMarcas.value))
@@ -66,7 +69,7 @@ export const useRegistrosStore = defineStore('registros', () => {
     let adicionados = 0
     let ignorados = 0
 
-    listaNomes.forEach(nome => {
+    listaNomes.forEach((nome) => {
       const limpo = (nome || '').trim().toUpperCase()
       if (limpo) {
         if (!existentes.includes(limpo)) {
@@ -91,7 +94,7 @@ export const useRegistrosStore = defineStore('registros', () => {
     (novos) => {
       localStorage.setItem('controlabast_logos_marcas', JSON.stringify(novos))
     },
-    { deep: true }
+    { deep: true },
   )
 
   const definirLogoMarca = (marca, urlOuBase64) => {
@@ -117,7 +120,7 @@ export const useRegistrosStore = defineStore('registros', () => {
     (novos) => {
       localStorage.setItem('controlabast_produtos', JSON.stringify(novos))
     },
-    { deep: true }
+    { deep: true },
   )
 
   const adicionarProduto = ({ nome, valor }) => {
@@ -125,9 +128,10 @@ export const useRegistrosStore = defineStore('registros', () => {
     const valorNum = Number(valor)
 
     if (!nomeLimpo) return { ok: false, msg: 'Nome do produto é obrigatório.' }
-    if (isNaN(valorNum) || valorNum < 0) return { ok: false, msg: 'Informe um valor válido maior ou igual a zero.' }
+    if (isNaN(valorNum) || valorNum < 0)
+      return { ok: false, msg: 'Informe um valor válido maior ou igual a zero.' }
 
-    const jaExiste = produtos.value.some(p => p.nome.toLowerCase() === nomeLimpo.toLowerCase())
+    const jaExiste = produtos.value.some((p) => p.nome.toLowerCase() === nomeLimpo.toLowerCase())
     if (jaExiste) {
       return { ok: false, msg: 'Já existe um produto com este nome.' }
     }
@@ -135,14 +139,14 @@ export const useRegistrosStore = defineStore('registros', () => {
     produtos.value.push({
       id: Date.now(),
       nome: nomeLimpo,
-      valor: valorNum
+      valor: valorNum,
     })
 
     return { ok: true, msg: 'Produto cadastrado com sucesso!' }
   }
 
   const removerProduto = (id) => {
-    produtos.value = produtos.value.filter(p => p.id !== id)
+    produtos.value = produtos.value.filter((p) => p.id !== id)
     return { ok: true, msg: 'Produto removido com sucesso.' }
   }
 
@@ -151,16 +155,18 @@ export const useRegistrosStore = defineStore('registros', () => {
     let adicionados = 0
     let ignorados = 0
 
-    listaProdutos.forEach(p => {
+    listaProdutos.forEach((p) => {
       const nomeLimpo = (p.nome || '').trim()
       const valorNum = Number(p.valor || 0)
       if (nomeLimpo) {
-        const jaExiste = existentes.some(item => item.nome.toLowerCase() === nomeLimpo.toLowerCase())
+        const jaExiste = existentes.some(
+          (item) => item.nome.toLowerCase() === nomeLimpo.toLowerCase(),
+        )
         if (!jaExiste) {
           existentes.push({
             id: Date.now() + Math.random(),
             nome: nomeLimpo,
-            valor: isNaN(valorNum) || valorNum < 0 ? 0 : valorNum
+            valor: isNaN(valorNum) || valorNum < 0 ? 0 : valorNum,
           })
           adicionados++
         } else {
@@ -182,7 +188,7 @@ export const useRegistrosStore = defineStore('registros', () => {
     (novas) => {
       localStorage.setItem('controlabast_celulas', JSON.stringify(novas))
     },
-    { deep: true }
+    { deep: true },
   )
 
   const adicionarCelula = (nome) => {
@@ -196,7 +202,7 @@ export const useRegistrosStore = defineStore('registros', () => {
   }
 
   const removerCelula = (nome) => {
-    celulas.value = celulas.value.filter(c => c !== nome)
+    celulas.value = celulas.value.filter((c) => c !== nome)
     return { ok: true, msg: 'Célula removida com sucesso.' }
   }
 
@@ -205,7 +211,7 @@ export const useRegistrosStore = defineStore('registros', () => {
     let adicionados = 0
     let ignorados = 0
 
-    listaNomes.forEach(nome => {
+    listaNomes.forEach((nome) => {
       const limpo = (nome || '').trim().toUpperCase()
       if (limpo) {
         if (!existentes.includes(limpo)) {
@@ -222,17 +228,23 @@ export const useRegistrosStore = defineStore('registros', () => {
   }
 
   // 4. Registros de abastecimento e resíduo
-  const dadosSalvos = localStorage.getItem('controlabast_registros_v2') || localStorage.getItem('controlabast_registros')
+  const dadosSalvos =
+    localStorage.getItem('controlabast_registros_v2') ||
+    localStorage.getItem('controlabast_registros')
   let dadosIniciais = DADOS_INICIAIS
 
   if (dadosSalvos) {
     try {
       const parsed = JSON.parse(dadosSalvos)
       if (Array.isArray(parsed) && parsed.length > 0) {
-        dadosIniciais = parsed.map(item => ({
+        dadosIniciais = parsed.map((item) => ({
           ...item,
           marca: item.marca || 'NIKE',
-          cracha: item.cracha || (item.nome && item.nome.includes('Crachá') ? item.nome.replace('Crachá', '').trim() : item.nome || '—')
+          cracha:
+            item.cracha ||
+            (item.nome && item.nome.includes('Crachá')
+              ? item.nome.replace('Crachá', '').trim()
+              : item.nome || '—'),
         }))
       }
     } catch {
@@ -248,26 +260,26 @@ export const useRegistrosStore = defineStore('registros', () => {
       localStorage.setItem('controlabast_registros_v2', JSON.stringify(novos))
       localStorage.setItem('controlabast_registros', JSON.stringify(novos))
     },
-    { deep: true }
+    { deep: true },
   )
 
   const adicionarRegistro = (registro) => {
     registros.value.unshift({
       id: Date.now(),
-      ...registro
+      ...registro,
     })
   }
 
   const removerRegistro = (id) => {
-    registros.value = registros.value.filter(reg => reg.id !== id)
+    registros.value = registros.value.filter((reg) => reg.id !== id)
   }
 
   const atualizarRegistro = (id, dadosAtualizados) => {
-    const index = registros.value.findIndex(reg => reg.id === id)
+    const index = registros.value.findIndex((reg) => reg.id === id)
     if (index !== -1) {
       registros.value[index] = {
         ...registros.value[index],
-        ...dadosAtualizados
+        ...dadosAtualizados,
       }
       return { ok: true, msg: 'Lançamento atualizado com sucesso!' }
     }
@@ -281,7 +293,7 @@ export const useRegistrosStore = defineStore('registros', () => {
   const admins = ref(adminsSalvos ? JSON.parse(adminsSalvos) : ADMINS_PADRAO)
 
   // Garante que o Master Rafael Oliveira da Silva (3014716) sempre esteja presente
-  if (!admins.value.some(a => a.cracha === '3014716')) {
+  if (!admins.value.some((a) => a.cracha === '3014716')) {
     admins.value.unshift(ADMINS_PADRAO[0])
   }
 
@@ -290,7 +302,7 @@ export const useRegistrosStore = defineStore('registros', () => {
     (novos) => {
       localStorage.setItem('controlabast_admins', JSON.stringify(novos))
     },
-    { deep: true }
+    { deep: true },
   )
 
   const loginSalvo = localStorage.getItem('controlabast_admin_ativo')
@@ -306,12 +318,12 @@ export const useRegistrosStore = defineStore('registros', () => {
         localStorage.removeItem('controlabast_admin_ativo')
       }
     },
-    { deep: true }
+    { deep: true },
   )
 
   const loginAdmin = (cracha) => {
     const crachaLimpo = (cracha || '').trim()
-    const encontrado = admins.value.find(a => a.cracha === crachaLimpo)
+    const encontrado = admins.value.find((a) => a.cracha === crachaLimpo)
     if (encontrado) {
       usuarioAdminLogado.value = { ...encontrado }
       return { ok: true, usuario: encontrado }
@@ -330,7 +342,7 @@ export const useRegistrosStore = defineStore('registros', () => {
     if (!crachaLimpo) return { ok: false, msg: 'O número do crachá é obrigatório.' }
     if (!nomeLimpo) return { ok: false, msg: 'O nome da pessoa é obrigatório.' }
 
-    if (admins.value.some(a => a.cracha === crachaLimpo)) {
+    if (admins.value.some((a) => a.cracha === crachaLimpo)) {
       return { ok: false, msg: 'Este crachá já possui permissão de administrador.' }
     }
 
@@ -339,7 +351,7 @@ export const useRegistrosStore = defineStore('registros', () => {
       nome: nomeLimpo,
       perfil: 'Administrador (Edição / Exclusão)',
       isMaster: false,
-      dataCadastro: new Date().toLocaleDateString('pt-BR')
+      dataCadastro: new Date().toLocaleDateString('pt-BR'),
     })
 
     return { ok: true, msg: `${nomeLimpo} adicionado(a) com permissões de editar e excluir!` }
@@ -350,8 +362,8 @@ export const useRegistrosStore = defineStore('registros', () => {
       return { ok: false, msg: 'O usuário Master principal não pode ser removido.' }
     }
 
-    const admin = admins.value.find(a => a.cracha === cracha)
-    admins.value = admins.value.filter(a => a.cracha !== cracha)
+    const admin = admins.value.find((a) => a.cracha === cracha)
+    admins.value = admins.value.filter((a) => a.cracha !== cracha)
 
     if (usuarioAdminLogado.value?.cracha === cracha) {
       logoutAdmin()
@@ -363,24 +375,24 @@ export const useRegistrosStore = defineStore('registros', () => {
   // Getters para totais
   const totalAbastecido = computed(() => {
     return registros.value
-      .filter(r => r.tipo === 'Abastecimento')
+      .filter((r) => r.tipo === 'Abastecimento')
       .reduce((acc, curr) => acc + Number(curr.qtd || 0), 0)
   })
 
   const totalResiduos = computed(() => {
     return registros.value
-      .filter(r => r.tipo === 'Resíduo')
+      .filter((r) => r.tipo === 'Resíduo')
       .reduce((acc, curr) => acc + Number(curr.qtd || 0), 0)
   })
 
   const totaisPorMarca = computed(() => {
     const mapa = {}
-    marcas.value.forEach(m => {
+    marcas.value.forEach((m) => {
       mapa[m] = 0
     })
     registros.value
-      .filter(r => r.tipo === 'Abastecimento')
-      .forEach(r => {
+      .filter((r) => r.tipo === 'Abastecimento')
+      .forEach((r) => {
         const m = (r.marca || '').toUpperCase()
         if (mapa[m] !== undefined) {
           mapa[m] += Number(r.qtd || 0)
@@ -402,7 +414,7 @@ export const useRegistrosStore = defineStore('registros', () => {
     titulo: 'Confirmar Exclusão',
     descricao: '',
     itemNome: '',
-    onConfirm: null
+    onConfirm: null,
   })
 
   // Estado da Notificação no Meio da Tela
@@ -411,7 +423,7 @@ export const useRegistrosStore = defineStore('registros', () => {
     tipo: 'sucesso',
     titulo: '',
     mensagem: '',
-    timerId: null
+    timerId: null,
   })
 
   const abrirConfirmacaoExclusao = ({ titulo, descricao, itemNome, onConfirm }) => {
@@ -420,7 +432,7 @@ export const useRegistrosStore = defineStore('registros', () => {
       titulo: titulo || 'Confirmar Exclusão',
       descricao: descricao || 'Esta ação não pode ser desfeita.',
       itemNome: itemNome || '',
-      onConfirm
+      onConfirm,
     }
   }
 
@@ -429,7 +441,11 @@ export const useRegistrosStore = defineStore('registros', () => {
     modalExclusao.value.onConfirm = null
   }
 
-  const mostrarNotificacaoCentro = ({ tipo = 'sucesso', titulo = 'Excluído com Sucesso!', mensagem = 'O item foi removido com sucesso.' }) => {
+  const mostrarNotificacaoCentro = ({
+    tipo = 'sucesso',
+    titulo = 'Excluído com Sucesso!',
+    mensagem = 'O item foi removido com sucesso.',
+  }) => {
     if (notificacaoCentro.value.timerId) {
       clearTimeout(notificacaoCentro.value.timerId)
     }
@@ -443,7 +459,7 @@ export const useRegistrosStore = defineStore('registros', () => {
       tipo,
       titulo,
       mensagem,
-      timerId: timer
+      timerId: timer,
     }
   }
 
@@ -463,17 +479,83 @@ export const useRegistrosStore = defineStore('registros', () => {
     fecharModalExclusao()
 
     const tituloSucesso = (resultado && resultado.titulo) || 'Excluído com Sucesso!'
-    const msgSucesso = (resultado && resultado.msg) || 'O item foi removido permanentemente do sistema.'
+    const msgSucesso =
+      (resultado && resultado.msg) || 'O item foi removido permanentemente do sistema.'
     mostrarNotificacaoCentro({
       tipo: 'sucesso',
       titulo: tituloSucesso,
-      mensagem: msgSucesso
+      mensagem: msgSucesso,
     })
 
     return { ok: true }
   }
 
-  return { 
+  // ----------------------------------------------------
+  // 6. Backup Completo e Restauração de Dados (JSON)
+  // ----------------------------------------------------
+  const exportarBackupCompleto = () => {
+    const dadosBackup = {
+      sistema: 'ControlAbast',
+      versao: '1.0',
+      dataExportacao: new Date().toISOString(),
+      marcas: marcas.value,
+      logosMarcas: logosMarcas.value,
+      produtos: produtos.value,
+      celulas: celulas.value,
+      registros: registros.value,
+      admins: admins.value,
+    }
+
+    const dataStr = new Date().toISOString().slice(0, 10)
+    const jsonStr = JSON.stringify(dadosBackup, null, 2)
+    const blob = new Blob([jsonStr], { type: 'application/json;charset=utf-8;' })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.download = `backup_controlabast_${dataStr}.json`
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
+
+    return { ok: true, msg: 'Backup exportado com sucesso!' }
+  }
+
+  const importarBackupCompleto = (dadosBackup) => {
+    if (!dadosBackup || typeof dadosBackup !== 'object') {
+      return { ok: false, msg: 'Arquivo de backup inválido ou formato corrompido.' }
+    }
+
+    if (Array.isArray(dadosBackup.marcas)) {
+      marcas.value = [...dadosBackup.marcas]
+    }
+    if (dadosBackup.logosMarcas && typeof dadosBackup.logosMarcas === 'object') {
+      logosMarcas.value = { ...dadosBackup.logosMarcas }
+    }
+    if (Array.isArray(dadosBackup.produtos)) {
+      produtos.value = [...dadosBackup.produtos]
+    }
+    if (Array.isArray(dadosBackup.celulas)) {
+      celulas.value = [...dadosBackup.celulas]
+    }
+    if (Array.isArray(dadosBackup.registros)) {
+      registros.value = [...dadosBackup.registros]
+    }
+    if (Array.isArray(dadosBackup.admins)) {
+      const novosAdmins = [...dadosBackup.admins]
+      if (!novosAdmins.some((a) => a.cracha === '3014716')) {
+        novosAdmins.unshift(ADMINS_PADRAO[0])
+      }
+      admins.value = novosAdmins
+    }
+
+    return {
+      ok: true,
+      msg: `Backup restaurado com sucesso! (${marcas.value.length} marcas, ${produtos.value.length} produtos, ${celulas.value.length} células e ${registros.value.length} lançamentos recuperados)`,
+    }
+  }
+
+  return {
     marcas,
     logosMarcas,
     definirLogoMarca,
@@ -489,9 +571,9 @@ export const useRegistrosStore = defineStore('registros', () => {
     adicionarCelula,
     removerCelula,
     importarCelulasEmLote,
-    registros, 
-    adicionarRegistro, 
-    removerRegistro, 
+    registros,
+    adicionarRegistro,
+    removerRegistro,
     atualizarRegistro,
     admins,
     usuarioAdminLogado,
@@ -500,8 +582,8 @@ export const useRegistrosStore = defineStore('registros', () => {
     logoutAdmin,
     adicionarAdmin,
     removerAdmin,
-    totalAbastecido, 
-    totalResiduos, 
+    totalAbastecido,
+    totalResiduos,
     totaisPorMarca,
     custosTotais,
     modalExclusao,
@@ -510,6 +592,8 @@ export const useRegistrosStore = defineStore('registros', () => {
     fecharModalExclusao,
     mostrarNotificacaoCentro,
     fecharNotificacaoCentro,
-    validarEExecutarExclusao
+    validarEExecutarExclusao,
+    exportarBackupCompleto,
+    importarBackupCompleto,
   }
 })

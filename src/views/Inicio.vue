@@ -1,27 +1,26 @@
 <script setup>
 import { ref, computed, onMounted, onUnmounted, watch, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
-import { 
+import {
   Home,
-  FlaskConical, 
-  Trash2, 
-  Activity, 
-  ArrowUpRight, 
-  PlusCircle, 
-  Calendar, 
+  FlaskConical,
+  Trash2,
+  Activity,
+  ArrowUpRight,
+  PlusCircle,
+  Calendar,
   ArrowRight,
   IdCard,
   Tag,
   DollarSign,
   Clock,
-  LayoutDashboard, 
   X,
   Save,
   CheckCircle2,
   Building2,
   Scale,
   Lock,
-  AlertCircle
+  AlertCircle,
 } from 'lucide-vue-next'
 import { useRegistrosStore } from '../stores/registros'
 import BrandLogo from '../components/BrandLogo.vue'
@@ -107,9 +106,9 @@ const isCampoPreenchido = (valor) => {
 
 // Abrir lista suspensa do datalist no clique do usuário
 const abrirLista = (e) => {
-  try {
-    e?.target?.showPicker?.()
-  } catch {}
+  if (e?.target && typeof e.target.showPicker === 'function') {
+    e.target.showPicker()
+  }
 }
 
 // ----------------------------------------------------
@@ -129,10 +128,10 @@ const fecharModalCracha = () => {
 
 const solicitarCrachaAbastecimento = () => {
   if (
-    !formAbast.value.data || 
-    !formAbast.value.marca || 
-    !formAbast.value.celula || 
-    !formAbast.value.produto || 
+    !formAbast.value.data ||
+    !formAbast.value.marca ||
+    !formAbast.value.celula ||
+    !formAbast.value.produto ||
     !formAbast.value.quantidade
   ) {
     return
@@ -148,10 +147,10 @@ const solicitarCrachaAbastecimento = () => {
 
 const solicitarCrachaResiduo = () => {
   if (
-    !formResiduo.value.data || 
-    !formResiduo.value.marca || 
-    !formResiduo.value.celula || 
-    !formResiduo.value.produto || 
+    !formResiduo.value.data ||
+    !formResiduo.value.marca ||
+    !formResiduo.value.celula ||
+    !formResiduo.value.produto ||
     !formResiduo.value.quantidade
   ) {
     return
@@ -189,7 +188,7 @@ const confirmarCrachaESalvar = () => {
       qtd: qtdNum,
       valorUnitario: valorUnitarioAbast.value,
       valorTotal: custoTotalAbastCalculado.value,
-      nome: `Crachá ${crachaLimpo}`
+      nome: `Crachá ${crachaLimpo}`,
     })
 
     sucessoAbastecimento.value = true
@@ -203,7 +202,7 @@ const confirmarCrachaESalvar = () => {
       marca: marcaAtual,
       celula: celulaAtual,
       produto: '',
-      quantidade: ''
+      quantidade: '',
     }
 
     setTimeout(() => {
@@ -225,7 +224,7 @@ const confirmarCrachaESalvar = () => {
       qtd: qtdNum,
       valorUnitario: valorUnitarioResiduo.value,
       valorTotal: custoTotalResiduoCalculado.value,
-      nome: `Crachá ${crachaLimpo}`
+      nome: `Crachá ${crachaLimpo}`,
     })
 
     sucessoResiduo.value = true
@@ -239,7 +238,7 @@ const confirmarCrachaESalvar = () => {
       marca: marcaAtual,
       celula: celulaAtual,
       produto: '',
-      quantidade: ''
+      quantidade: '',
     }
 
     setTimeout(() => {
@@ -260,12 +259,15 @@ const formAbast = ref({
   marca: '',
   celula: '',
   produto: '',
-  quantidade: ''
+  quantidade: '',
 })
 
 const produtoAbastSelecionado = computed(() => {
   if (!formAbast.value.produto) return null
-  return store.produtos.find(p => p.nome.toLowerCase() === formAbast.value.produto.toLowerCase()) || null
+  return (
+    store.produtos.find((p) => p.nome.toLowerCase() === formAbast.value.produto.toLowerCase()) ||
+    null
+  )
 })
 
 const valorUnitarioAbast = computed(() => {
@@ -287,12 +289,15 @@ const formResiduo = ref({
   marca: '',
   celula: '',
   produto: '',
-  quantidade: ''
+  quantidade: '',
 })
 
 const produtoResiduoSelecionado = computed(() => {
   if (!formResiduo.value.produto) return null
-  return store.produtos.find(p => p.nome.toLowerCase() === formResiduo.value.produto.toLowerCase()) || null
+  return (
+    store.produtos.find((p) => p.nome.toLowerCase() === formResiduo.value.produto.toLowerCase()) ||
+    null
+  )
 })
 
 const valorUnitarioResiduo = computed(() => {
@@ -309,18 +314,18 @@ const custoTotalResiduoCalculado = computed(() => {
 // ----------------------------------------------------
 // Registros estritamente DO DIA ATUAL
 const registrosDoDia = computed(() => {
-  return store.registros.filter(r => r.dataHora && r.dataHora.startsWith(dataHoje))
+  return store.registros.filter((r) => r.dataHora && r.dataHora.startsWith(dataHoje))
 })
 
 const totalAbastecidoHoje = computed(() => {
   return registrosDoDia.value
-    .filter(r => r.tipo === 'Abastecimento')
+    .filter((r) => r.tipo === 'Abastecimento')
     .reduce((acc, curr) => acc + Number(curr.qtd || 0), 0)
 })
 
 const totalResiduosHoje = computed(() => {
   return registrosDoDia.value
-    .filter(r => r.tipo === 'Resíduo')
+    .filter((r) => r.tipo === 'Resíduo')
     .reduce((acc, curr) => acc + Number(curr.qtd || 0), 0)
 })
 
@@ -333,12 +338,12 @@ const totalOperacoesHoje = computed(() => registrosDoDia.value.length)
 // Abastecimento por marca apenas no dia atual
 const totaisPorMarcaHoje = computed(() => {
   const mapa = {}
-  store.marcas.forEach(m => {
+  store.marcas.forEach((m) => {
     mapa[m] = 0
   })
   registrosDoDia.value
-    .filter(r => r.tipo === 'Abastecimento')
-    .forEach(r => {
+    .filter((r) => r.tipo === 'Abastecimento')
+    .forEach((r) => {
       const m = (r.marca || '').toUpperCase()
       if (mapa[m] !== undefined) {
         mapa[m] += Number(r.qtd || 0)
@@ -354,22 +359,23 @@ const formatarMoeda = (valor) => {
 }
 
 const removerRegistroInicio = (id) => {
-  const item = store.registros.find(r => r.id === id)
-  const itemDesc = item 
-    ? `${item.tipo}: ${item.produto} • ${Number(item.qtd).toLocaleString('pt-BR')} Kg/L (${item.marca || item.celula})` 
+  const item = store.registros.find((r) => r.id === id)
+  const itemDesc = item
+    ? `${item.tipo}: ${item.produto} • ${Number(item.qtd).toLocaleString('pt-BR')} Kg/L (${item.marca || item.celula})`
     : `Lançamento #${id}`
 
   store.abrirConfirmacaoExclusao({
     titulo: 'Excluir Movimentação de Hoje',
-    descricao: 'Tem certeza que deseja excluir esta movimentação? Os totais do dia e relatórios serão recalculados automaticamente.',
+    descricao:
+      'Tem certeza que deseja excluir esta movimentação? Os totais do dia e relatórios serão recalculados automaticamente.',
     itemNome: itemDesc,
     onConfirm: () => {
       store.removerRegistro(id)
       return {
         titulo: 'Lançamento Removido!',
-        msg: 'A movimentação foi excluída com sucesso e o painel de hoje foi atualizado.'
+        msg: 'A movimentação foi excluída com sucesso e o painel de hoje foi atualizado.',
       }
-    }
+    },
   })
 }
 </script>
@@ -386,18 +392,22 @@ const removerRegistroInicio = (id) => {
           </div>
           <div class="today-indicator">
             <Clock :size="14" />
-            <span>Hoje: <strong>{{ dataHoje }}</strong></span>
+            <span
+              >Hoje: <strong>{{ dataHoje }}</strong></span
+            >
           </div>
         </div>
         <h1 class="page-title">Painel</h1>
-        <p class="page-subtitle">Acompanhamento diário em tempo real das movimentações químicas do dia {{ dataHoje }}</p>
+        <p class="page-subtitle">
+          Acompanhamento diário em tempo real das movimentações químicas do dia {{ dataHoje }}
+        </p>
       </div>
 
       <!-- Botões de Ação na Tela Inicial -->
       <div class="header-actions">
-        <button 
+        <button
           type="button"
-          @click="togglePainel('abastecimento')" 
+          @click="togglePainel('abastecimento')"
           class="btn-panel-trigger btn-trigger-abast"
           :class="{ 'btn-panel-active': painelAberto === 'abastecimento' }"
         >
@@ -409,9 +419,9 @@ const removerRegistroInicio = (id) => {
           </span>
         </button>
 
-        <button 
+        <button
           type="button"
-          @click="togglePainel('residuo')" 
+          @click="togglePainel('residuo')"
           class="btn-panel-trigger btn-trigger-residuo"
           :class="{ 'btn-panel-active': painelAberto === 'residuo' }"
         >
@@ -428,356 +438,433 @@ const removerRegistroInicio = (id) => {
     <!-- MODAL FLUTUANTE NA TELA INICIAL (NÃO EMPURRA OS ELEMENTOS DE TRÁS) -->
     <Teleport to="body">
       <Transition name="floating-modal-anim">
-        <div 
-          v-if="painelAberto" 
-          class="floating-modal-backdrop" 
+        <div
+          v-if="painelAberto"
+          class="floating-modal-backdrop"
           @click.self="fecharPainel"
-          aria-modal="true" 
+          aria-modal="true"
           role="dialog"
         >
-          <div 
-            class="floating-modal-card" 
+          <div
+            class="floating-modal-card"
             :class="painelAberto === 'abastecimento' ? 'modal-theme-abast' : 'modal-theme-residuo'"
           >
-          <!-- Barra Superior do Painel -->
-          <div class="panel-header-bar">
-            <div class="panel-title-side">
-              <div class="panel-icon-circle" :class="painelAberto === 'abastecimento' ? 'icon-circle-abast' : 'icon-circle-residuo'">
-                <FlaskConical v-if="painelAberto === 'abastecimento'" :size="20" />
-                <Trash2 v-else :size="20" />
+            <!-- Barra Superior do Painel -->
+            <div class="panel-header-bar">
+              <div class="panel-title-side">
+                <div
+                  class="panel-icon-circle"
+                  :class="
+                    painelAberto === 'abastecimento' ? 'icon-circle-abast' : 'icon-circle-residuo'
+                  "
+                >
+                  <FlaskConical v-if="painelAberto === 'abastecimento'" :size="20" />
+                  <Trash2 v-else :size="20" />
+                </div>
+                <div>
+                  <div
+                    class="panel-pill-badge"
+                    :class="painelAberto === 'abastecimento' ? 'pill-abast' : 'pill-residuo'"
+                  >
+                    {{
+                      painelAberto === 'abastecimento'
+                        ? 'Setor Químico • Abastecimento'
+                        : 'Gestão Ambiental • Resíduos'
+                    }}
+                  </div>
+                  <h2 class="panel-headline">
+                    {{
+                      painelAberto === 'abastecimento'
+                        ? 'Painel de Novo Abastecimento'
+                        : 'Painel de Destinação de Resíduos'
+                    }}
+                  </h2>
+                  <p class="panel-desc">
+                    {{
+                      painelAberto === 'abastecimento'
+                        ? 'Lançamento rápido de insumos químicos para células de produção de calçados'
+                        : 'Registro imediato de descarte, destinação e reciclagem de resíduos químicos'
+                    }}
+                  </p>
+                </div>
               </div>
+
+              <!-- Controles do Painel: Alternador e Botão Fechar -->
+              <div class="panel-actions-side">
+                <div class="panel-switch-group">
+                  <button
+                    type="button"
+                    @click="painelAberto = 'abastecimento'"
+                    class="switch-btn"
+                    :class="{ active: painelAberto === 'abastecimento' }"
+                  >
+                    <FlaskConical :size="15" />
+                    <span>Abastecimento</span>
+                  </button>
+                  <button
+                    type="button"
+                    @click="painelAberto = 'residuo'"
+                    class="switch-btn"
+                    :class="{ active: painelAberto === 'residuo' }"
+                  >
+                    <Trash2 :size="15" />
+                    <span>Resíduos</span>
+                  </button>
+                </div>
+
+                <button
+                  type="button"
+                  @click="fecharPainel"
+                  class="btn-close-panel"
+                  title="Fechar painel"
+                >
+                  <X :size="18" />
+                  <span>Fechar</span>
+                </button>
+              </div>
+            </div>
+
+            <!-- Mensagem de Sucesso Abastecimento -->
+            <div
+              v-if="sucessoAbastecimento && painelAberto === 'abastecimento'"
+              class="alert-success panel-alert"
+            >
+              <CheckCircle2 :size="20" />
               <div>
-                <div class="panel-pill-badge" :class="painelAberto === 'abastecimento' ? 'pill-abast' : 'pill-residuo'">
-                  {{ painelAberto === 'abastecimento' ? 'Setor Químico • Abastecimento' : 'Gestão Ambiental • Resíduos' }}
-                </div>
-                <h2 class="panel-headline">
-                  {{ painelAberto === 'abastecimento' ? 'Painel de Novo Abastecimento' : 'Painel de Destinação de Resíduos' }}
-                </h2>
-                <p class="panel-desc">
-                  {{ painelAberto === 'abastecimento' 
-                    ? 'Lançamento rápido de insumos químicos para células de produção de calçados' 
-                    : 'Registro imediato de descarte, destinação e reciclagem de resíduos químicos' }}
-                </p>
+                <strong>Abastecimento lançado com sucesso!</strong>
+                <span>
+                  O registro foi salvo e os totais de hoje foram recalculados em tempo real.</span
+                >
               </div>
             </div>
 
-            <!-- Controles do Painel: Alternador e Botão Fechar -->
-            <div class="panel-actions-side">
-              <div class="panel-switch-group">
-                <button 
-                  type="button"
-                  @click="painelAberto = 'abastecimento'" 
-                  class="switch-btn"
-                  :class="{ active: painelAberto === 'abastecimento' }"
-                >
-                  <FlaskConical :size="15" />
-                  <span>Abastecimento</span>
-                </button>
-                <button 
-                  type="button"
-                  @click="painelAberto = 'residuo'" 
-                  class="switch-btn"
-                  :class="{ active: painelAberto === 'residuo' }"
-                >
-                  <Trash2 :size="15" />
-                  <span>Resíduos</span>
-                </button>
+            <!-- Mensagem de Sucesso Resíduo -->
+            <div
+              v-if="sucessoResiduo && painelAberto === 'residuo'"
+              class="alert-success panel-alert"
+            >
+              <CheckCircle2 :size="20" />
+              <div>
+                <strong>Resíduo químico registrado com sucesso!</strong>
+                <span> O registro foi salvo e já consta no histórico ambiental de hoje.</span>
               </div>
-
-              <button type="button" @click="fecharPainel" class="btn-close-panel" title="Fechar painel">
-                <X :size="18" />
-                <span>Fechar</span>
-              </button>
             </div>
-          </div>
 
-          <!-- Mensagem de Sucesso Abastecimento -->
-          <div v-if="sucessoAbastecimento && painelAberto === 'abastecimento'" class="alert-success panel-alert">
-            <CheckCircle2 :size="20" />
-            <div>
-              <strong>Abastecimento lançado com sucesso!</strong>
-              <span> O registro foi salvo e os totais de hoje foram recalculados em tempo real.</span>
-            </div>
-          </div>
-
-          <!-- Mensagem de Sucesso Resíduo -->
-          <div v-if="sucessoResiduo && painelAberto === 'residuo'" class="alert-success panel-alert">
-            <CheckCircle2 :size="20" />
-            <div>
-              <strong>Resíduo químico registrado com sucesso!</strong>
-              <span> O registro foi salvo e já consta no histórico ambiental de hoje.</span>
-            </div>
-          </div>
-
-          <!-- Formulário: NOVO ABASTECIMENTO -->
-          <div v-if="painelAberto === 'abastecimento'" class="panel-form-content">
-            <!-- Caixinha de Custo Total Calculado -->
-            <div v-if="produtoAbastSelecionado" class="panel-cost-wrapper">
-              <div class="panel-cost-box">
-                <div class="mini-box-header">
-                  <div class="mini-box-icon">
-                    <DollarSign :size="15" />
+            <!-- Formulário: NOVO ABASTECIMENTO -->
+            <div v-if="painelAberto === 'abastecimento'" class="panel-form-content">
+              <!-- Caixinha de Custo Total Calculado -->
+              <div v-if="produtoAbastSelecionado" class="panel-cost-wrapper">
+                <div class="panel-cost-box">
+                  <div class="mini-box-header">
+                    <div class="mini-box-icon">
+                      <DollarSign :size="15" />
+                    </div>
+                    <span class="mini-box-title">Custo Total Estimado</span>
                   </div>
-                  <span class="mini-box-title">Custo Total Estimado</span>
-                </div>
-                <div class="mini-box-value">
-                  {{ formatarMoeda(custoTotalAbastCalculado) }}
-                </div>
-                <div class="mini-box-footer">
-                  <span class="mini-box-calc">
-                    {{ formAbast.quantidade || '0' }} Kg/L × {{ formatarMoeda(valorUnitarioAbast) }}
-                  </span>
-                  <span class="mini-box-sep">•</span>
-                  <span class="mini-box-unit">
-                    Unitário: <strong>{{ formatarMoeda(valorUnitarioAbast) }}</strong>
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            <form @submit.prevent="solicitarCrachaAbastecimento" class="modern-form">
-              <!-- Linha 1: Data e Crachá -->
-              <div class="form-grid">
-                <div class="input-group">
-                  <label><Calendar :size="15" /> Data do Abastecimento</label>
-                  <input
-                    type="date"
-                    v-model="formAbast.data"
-                    :class="['modern-input', { 'input-filled': isCampoPreenchido(formAbast.data) }]"
-                    required
-                  />
-                </div>
-
-                <div class="input-group">
-                  <label><IdCard :size="15" /> Crachá do Operador</label>
-                  <div class="cracha-lock-badge">
-                    <Lock :size="14" />
-                    <span>Solicitado ao clicar em Salvar</span>
+                  <div class="mini-box-value">
+                    {{ formatarMoeda(custoTotalAbastCalculado) }}
+                  </div>
+                  <div class="mini-box-footer">
+                    <span class="mini-box-calc">
+                      {{ formAbast.quantidade || '0' }} Kg/L ×
+                      {{ formatarMoeda(valorUnitarioAbast) }}
+                    </span>
+                    <span class="mini-box-sep">•</span>
+                    <span class="mini-box-unit">
+                      Unitário: <strong>{{ formatarMoeda(valorUnitarioAbast) }}</strong>
+                    </span>
                   </div>
                 </div>
               </div>
 
-              <!-- Linha 2: Marca e Célula -->
-              <div class="form-grid">
-                <div class="input-group">
-                  <label><Tag :size="15" /> Marca</label>
-                  <input
-                    type="text"
-                    list="lista-marcas-inicio-abast"
-                    v-model="formAbast.marca"
-                    :class="['modern-input', { 'input-filled': isCampoPreenchido(formAbast.marca) }]"
-                    placeholder="Selecione ou digite a marca..."
-                    @click="abrirLista($event)"
-                    required
-                  />
-                  <datalist id="lista-marcas-inicio-abast">
-                    <option v-for="m in store.marcas" :key="m" :value="m">{{ m }}</option>
-                  </datalist>
-                </div>
-
-                <div class="input-group">
-                  <label><Building2 :size="15" /> Célula de Produção</label>
-                  <input
-                    type="text"
-                    list="lista-celulas-inicio-abast"
-                    v-model="formAbast.celula"
-                    :class="['modern-input', { 'input-filled': isCampoPreenchido(formAbast.celula) }]"
-                    placeholder="Selecione ou digite a célula..."
-                    @click="abrirLista($event)"
-                    required
-                  />
-                  <datalist id="lista-celulas-inicio-abast">
-                    <option v-for="c in store.celulas" :key="c" :value="c">{{ c }}</option>
-                  </datalist>
-                </div>
-              </div>
-
-              <!-- Linha 3: Produto e Quantidade -->
-              <div class="form-grid">
-                <div class="input-group">
-                  <label><FlaskConical :size="15" /> Produto Químico</label>
-                  <input
-                    type="text"
-                    list="lista-produtos-inicio-abast"
-                    v-model="formAbast.produto"
-                    :class="['modern-input', { 'input-filled': isCampoPreenchido(formAbast.produto) }]"
-                    placeholder="Selecione ou digite o produto químico..."
-                    @click="abrirLista($event)"
-                    required
-                  />
-                  <datalist id="lista-produtos-inicio-abast">
-                    <option v-for="p in store.produtos" :key="p.id" :value="p.nome">{{ p.nome }}</option>
-                  </datalist>
-                </div>
-
-                <div class="input-group">
-                  <label><Scale :size="15" /> Quantidade Abastecida</label>
-                  <div class="input-with-suffix">
+              <form @submit.prevent="solicitarCrachaAbastecimento" class="modern-form">
+                <!-- Linha 1: Data e Crachá -->
+                <div class="form-grid">
+                  <div class="input-group">
+                    <label><Calendar :size="15" /> Data do Abastecimento</label>
                     <input
-                      type="number"
-                      v-model="formAbast.quantidade"
-                      :class="['modern-input', { 'input-filled': isCampoPreenchido(formAbast.quantidade) }]"
-                      step="0.001"
-                      placeholder="0.000"
-                      min="0.001"
+                      type="date"
+                      v-model="formAbast.data"
+                      :class="[
+                        'modern-input',
+                        { 'input-filled': isCampoPreenchido(formAbast.data) },
+                      ]"
                       required
                     />
-                    <span class="suffix" :class="{ 'suffix-filled': isCampoPreenchido(formAbast.quantidade) }">Kg / L</span>
+                  </div>
+
+                  <div class="input-group">
+                    <label><IdCard :size="15" /> Crachá do Operador</label>
+                    <div class="cracha-lock-badge">
+                      <Lock :size="14" />
+                      <span>Solicitado ao clicar em Salvar</span>
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              <!-- Rodapé de Ações do Abastecimento -->
-              <div class="panel-form-footer">
-                <button type="button" @click="fecharPainel" class="btn-secondary">
-                  Cancelar
-                </button>
-                <button type="submit" class="btn-primary">
-                  <Save :size="18" /> Salvar Abastecimento
-                </button>
-              </div>
-            </form>
-          </div>
-
-          <!-- Formulário: DESTINAÇÃO DE RESÍDUOS -->
-          <div v-if="painelAberto === 'residuo'" class="panel-form-content">
-            <!-- Caixinha de Custo Total Estimado de Resíduo -->
-            <div v-if="produtoResiduoSelecionado" class="panel-cost-wrapper">
-              <div class="panel-cost-box panel-cost-box-amber">
-                <div class="mini-box-header">
-                  <div class="mini-box-icon mini-box-icon-amber">
-                    <DollarSign :size="15" />
-                  </div>
-                  <span class="mini-box-title mini-box-title-amber">Custo Estimado do Resíduo</span>
-                </div>
-                <div class="mini-box-value mini-box-value-amber">
-                  {{ formatarMoeda(custoTotalResiduoCalculado) }}
-                </div>
-                <div class="mini-box-footer">
-                  <span class="mini-box-calc">
-                    {{ formResiduo.quantidade || '0' }} Kg/L × {{ formatarMoeda(valorUnitarioResiduo) }}
-                  </span>
-                  <span class="mini-box-sep">•</span>
-                  <span class="mini-box-unit">
-                    Unitário: <strong>{{ formatarMoeda(valorUnitarioResiduo) }}</strong>
-                  </span>
-                </div>
-              </div>
-            </div>
-
-            <form @submit.prevent="solicitarCrachaResiduo" class="modern-form">
-              <!-- Linha 1: Data e Crachá -->
-              <div class="form-grid">
-                <div class="input-group">
-                  <label><Calendar :size="15" /> Data do Resíduo</label>
-                  <input
-                    type="date"
-                    v-model="formResiduo.data"
-                    :class="['modern-input', { 'input-filled': isCampoPreenchido(formResiduo.data) }]"
-                    required
-                  />
-                </div>
-
-                <div class="input-group">
-                  <label><IdCard :size="15" /> Crachá</label>
-                  <div class="cracha-lock-badge cracha-lock-amber">
-                    <Lock :size="14" />
-                    <span>Solicitado ao clicar em Salvar</span>
-                  </div>
-                </div>
-              </div>
-
-              <!-- Linha 2: Marca e Célula -->
-              <div class="form-grid">
-                <div class="input-group">
-                  <label><Tag :size="15" /> Marca</label>
-                  <input
-                    type="text"
-                    list="lista-marcas-inicio-residuo"
-                    v-model="formResiduo.marca"
-                    :class="['modern-input', { 'input-filled': isCampoPreenchido(formResiduo.marca) }]"
-                    placeholder="Selecione ou digite a marca..."
-                    @click="abrirLista($event)"
-                    required
-                  />
-                  <datalist id="lista-marcas-inicio-residuo">
-                    <option v-for="m in store.marcas" :key="m" :value="m">{{ m }}</option>
-                  </datalist>
-                </div>
-
-                <div class="input-group">
-                  <label><Building2 :size="15" /> Célula</label>
-                  <input
-                    type="text"
-                    list="lista-celulas-inicio-residuo"
-                    v-model="formResiduo.celula"
-                    :class="['modern-input', { 'input-filled': isCampoPreenchido(formResiduo.celula) }]"
-                    placeholder="Selecione ou digite a célula..."
-                    @click="abrirLista($event)"
-                    required
-                  />
-                  <datalist id="lista-celulas-inicio-residuo">
-                    <option v-for="c in store.celulas" :key="c" :value="c">{{ c }}</option>
-                  </datalist>
-                </div>
-              </div>
-
-              <!-- Linha 3: Produto e Quantidade -->
-              <div class="form-grid">
-                <div class="input-group">
-                  <label><FlaskConical :size="15" /> Produto</label>
-                  <input
-                    type="text"
-                    list="lista-produtos-inicio-residuo"
-                    v-model="formResiduo.produto"
-                    :class="['modern-input', { 'input-filled': isCampoPreenchido(formResiduo.produto) }]"
-                    placeholder="Selecione ou digite o produto..."
-                    @click="abrirLista($event)"
-                    required
-                  />
-                  <datalist id="lista-produtos-inicio-residuo">
-                    <option v-for="p in store.produtos" :key="p.id" :value="p.nome">{{ p.nome }}</option>
-                  </datalist>
-                </div>
-
-                <div class="input-group">
-                  <label><Scale :size="15" /> Quantidade</label>
-                  <div class="input-with-suffix">
+                <!-- Linha 2: Marca e Célula -->
+                <div class="form-grid">
+                  <div class="input-group">
+                    <label><Tag :size="15" /> Marca</label>
                     <input
-                      type="number"
-                      v-model="formResiduo.quantidade"
-                      :class="['modern-input', { 'input-filled': isCampoPreenchido(formResiduo.quantidade) }]"
-                      step="0.001"
-                      placeholder="0.000"
-                      min="0.001"
+                      type="text"
+                      list="lista-marcas-inicio-abast"
+                      v-model="formAbast.marca"
+                      :class="[
+                        'modern-input',
+                        { 'input-filled': isCampoPreenchido(formAbast.marca) },
+                      ]"
+                      placeholder="Selecione ou digite a marca..."
+                      @click="abrirLista($event)"
                       required
                     />
-                    <span class="suffix" :class="{ 'suffix-filled': isCampoPreenchido(formResiduo.quantidade) }">Kg / L</span>
+                    <datalist id="lista-marcas-inicio-abast">
+                      <option v-for="m in store.marcas" :key="m" :value="m">{{ m }}</option>
+                    </datalist>
+                  </div>
+
+                  <div class="input-group">
+                    <label><Building2 :size="15" /> Célula de Produção</label>
+                    <input
+                      type="text"
+                      list="lista-celulas-inicio-abast"
+                      v-model="formAbast.celula"
+                      :class="[
+                        'modern-input',
+                        { 'input-filled': isCampoPreenchido(formAbast.celula) },
+                      ]"
+                      placeholder="Selecione ou digite a célula..."
+                      @click="abrirLista($event)"
+                      required
+                    />
+                    <datalist id="lista-celulas-inicio-abast">
+                      <option v-for="c in store.celulas" :key="c" :value="c">{{ c }}</option>
+                    </datalist>
+                  </div>
+                </div>
+
+                <!-- Linha 3: Produto e Quantidade -->
+                <div class="form-grid">
+                  <div class="input-group">
+                    <label><FlaskConical :size="15" /> Produto Químico</label>
+                    <input
+                      type="text"
+                      list="lista-produtos-inicio-abast"
+                      v-model="formAbast.produto"
+                      :class="[
+                        'modern-input',
+                        { 'input-filled': isCampoPreenchido(formAbast.produto) },
+                      ]"
+                      placeholder="Selecione ou digite o produto químico..."
+                      @click="abrirLista($event)"
+                      required
+                    />
+                    <datalist id="lista-produtos-inicio-abast">
+                      <option v-for="p in store.produtos" :key="p.id" :value="p.nome">
+                        {{ p.nome }}
+                      </option>
+                    </datalist>
+                  </div>
+
+                  <div class="input-group">
+                    <label><Scale :size="15" /> Quantidade Abastecida</label>
+                    <div class="input-with-suffix">
+                      <input
+                        type="number"
+                        v-model="formAbast.quantidade"
+                        :class="[
+                          'modern-input',
+                          { 'input-filled': isCampoPreenchido(formAbast.quantidade) },
+                        ]"
+                        step="0.001"
+                        placeholder="0.000"
+                        min="0.001"
+                        required
+                      />
+                      <span
+                        class="suffix"
+                        :class="{ 'suffix-filled': isCampoPreenchido(formAbast.quantidade) }"
+                        >Kg / L</span
+                      >
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Rodapé de Ações do Abastecimento -->
+                <div class="panel-form-footer">
+                  <button type="button" @click="fecharPainel" class="btn-secondary">
+                    Cancelar
+                  </button>
+                  <button type="submit" class="btn-primary">
+                    <Save :size="18" /> Salvar Abastecimento
+                  </button>
+                </div>
+              </form>
+            </div>
+
+            <!-- Formulário: DESTINAÇÃO DE RESÍDUOS -->
+            <div v-if="painelAberto === 'residuo'" class="panel-form-content">
+              <!-- Caixinha de Custo Total Estimado de Resíduo -->
+              <div v-if="produtoResiduoSelecionado" class="panel-cost-wrapper">
+                <div class="panel-cost-box panel-cost-box-amber">
+                  <div class="mini-box-header">
+                    <div class="mini-box-icon mini-box-icon-amber">
+                      <DollarSign :size="15" />
+                    </div>
+                    <span class="mini-box-title mini-box-title-amber"
+                      >Custo Estimado do Resíduo</span
+                    >
+                  </div>
+                  <div class="mini-box-value mini-box-value-amber">
+                    {{ formatarMoeda(custoTotalResiduoCalculado) }}
+                  </div>
+                  <div class="mini-box-footer">
+                    <span class="mini-box-calc">
+                      {{ formResiduo.quantidade || '0' }} Kg/L ×
+                      {{ formatarMoeda(valorUnitarioResiduo) }}
+                    </span>
+                    <span class="mini-box-sep">•</span>
+                    <span class="mini-box-unit">
+                      Unitário: <strong>{{ formatarMoeda(valorUnitarioResiduo) }}</strong>
+                    </span>
                   </div>
                 </div>
               </div>
 
-              <!-- Rodapé de Ações de Resíduo -->
-              <div class="panel-form-footer">
-                <button type="button" @click="fecharPainel" class="btn-secondary">
-                  Cancelar
-                </button>
-                <button type="submit" class="btn-primary btn-amber">
-                  <Save :size="18" /> Salvar Resíduo
-                </button>
-              </div>
-            </form>
+              <form @submit.prevent="solicitarCrachaResiduo" class="modern-form">
+                <!-- Linha 1: Data e Crachá -->
+                <div class="form-grid">
+                  <div class="input-group">
+                    <label><Calendar :size="15" /> Data do Resíduo</label>
+                    <input
+                      type="date"
+                      v-model="formResiduo.data"
+                      :class="[
+                        'modern-input',
+                        { 'input-filled': isCampoPreenchido(formResiduo.data) },
+                      ]"
+                      required
+                    />
+                  </div>
+
+                  <div class="input-group">
+                    <label><IdCard :size="15" /> Crachá</label>
+                    <div class="cracha-lock-badge cracha-lock-amber">
+                      <Lock :size="14" />
+                      <span>Solicitado ao clicar em Salvar</span>
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Linha 2: Marca e Célula -->
+                <div class="form-grid">
+                  <div class="input-group">
+                    <label><Tag :size="15" /> Marca</label>
+                    <input
+                      type="text"
+                      list="lista-marcas-inicio-residuo"
+                      v-model="formResiduo.marca"
+                      :class="[
+                        'modern-input',
+                        { 'input-filled': isCampoPreenchido(formResiduo.marca) },
+                      ]"
+                      placeholder="Selecione ou digite a marca..."
+                      @click="abrirLista($event)"
+                      required
+                    />
+                    <datalist id="lista-marcas-inicio-residuo">
+                      <option v-for="m in store.marcas" :key="m" :value="m">{{ m }}</option>
+                    </datalist>
+                  </div>
+
+                  <div class="input-group">
+                    <label><Building2 :size="15" /> Célula</label>
+                    <input
+                      type="text"
+                      list="lista-celulas-inicio-residuo"
+                      v-model="formResiduo.celula"
+                      :class="[
+                        'modern-input',
+                        { 'input-filled': isCampoPreenchido(formResiduo.celula) },
+                      ]"
+                      placeholder="Selecione ou digite a célula..."
+                      @click="abrirLista($event)"
+                      required
+                    />
+                    <datalist id="lista-celulas-inicio-residuo">
+                      <option v-for="c in store.celulas" :key="c" :value="c">{{ c }}</option>
+                    </datalist>
+                  </div>
+                </div>
+
+                <!-- Linha 3: Produto e Quantidade -->
+                <div class="form-grid">
+                  <div class="input-group">
+                    <label><FlaskConical :size="15" /> Produto</label>
+                    <input
+                      type="text"
+                      list="lista-produtos-inicio-residuo"
+                      v-model="formResiduo.produto"
+                      :class="[
+                        'modern-input',
+                        { 'input-filled': isCampoPreenchido(formResiduo.produto) },
+                      ]"
+                      placeholder="Selecione ou digite o produto..."
+                      @click="abrirLista($event)"
+                      required
+                    />
+                    <datalist id="lista-produtos-inicio-residuo">
+                      <option v-for="p in store.produtos" :key="p.id" :value="p.nome">
+                        {{ p.nome }}
+                      </option>
+                    </datalist>
+                  </div>
+
+                  <div class="input-group">
+                    <label><Scale :size="15" /> Quantidade</label>
+                    <div class="input-with-suffix">
+                      <input
+                        type="number"
+                        v-model="formResiduo.quantidade"
+                        :class="[
+                          'modern-input',
+                          { 'input-filled': isCampoPreenchido(formResiduo.quantidade) },
+                        ]"
+                        step="0.001"
+                        placeholder="0.000"
+                        min="0.001"
+                        required
+                      />
+                      <span
+                        class="suffix"
+                        :class="{ 'suffix-filled': isCampoPreenchido(formResiduo.quantidade) }"
+                        >Kg / L</span
+                      >
+                    </div>
+                  </div>
+                </div>
+
+                <!-- Rodapé de Ações de Resíduo -->
+                <div class="panel-form-footer">
+                  <button type="button" @click="fecharPainel" class="btn-secondary">
+                    Cancelar
+                  </button>
+                  <button type="submit" class="btn-primary btn-amber">
+                    <Save :size="18" /> Salvar Resíduo
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
         </div>
-      </div>
       </Transition>
     </Teleport>
 
     <!-- Modal Flutuante de Confirmação do Crachá do Operador (Solicitado ao Salvar) -->
     <Teleport to="body">
       <Transition name="fade">
-        <div 
-          v-if="modalCrachaAberto" 
+        <div
+          v-if="modalCrachaAberto"
           class="floating-modal-backdrop cracha-modal-backdrop"
           @click.self="fecharModalCracha"
           aria-modal="true"
@@ -785,42 +872,72 @@ const removerRegistroInicio = (id) => {
         >
           <div class="cracha-modal-card">
             <div class="cracha-modal-header">
-              <div class="cracha-modal-icon" :class="operacaoPendente === 'abastecimento' ? 'icon-circle-abast' : 'icon-circle-residuo'">
+              <div
+                class="cracha-modal-icon"
+                :class="
+                  operacaoPendente === 'abastecimento' ? 'icon-circle-abast' : 'icon-circle-residuo'
+                "
+              >
                 <IdCard :size="24" />
               </div>
               <div class="cracha-modal-titles">
                 <h3>Identificação do Operador</h3>
-                <p>Aproxime ou digite o crachá para confirmar e salvar o {{ operacaoPendente === 'abastecimento' ? 'abastecimento' : 'resíduo' }}</p>
+                <p>
+                  Aproxime ou digite o crachá para confirmar e salvar o
+                  {{ operacaoPendente === 'abastecimento' ? 'abastecimento' : 'resíduo' }}
+                </p>
               </div>
-              <button type="button" @click="fecharModalCracha" class="btn-close-modal" title="Cancelar">
+              <button
+                type="button"
+                @click="fecharModalCracha"
+                class="btn-close-modal"
+                title="Cancelar"
+              >
                 <X :size="20" />
               </button>
             </div>
 
             <!-- Resumo da Operação -->
-            <div class="cracha-resumo-box" :class="operacaoPendente === 'abastecimento' ? 'resumo-abast' : 'resumo-residuo'">
+            <div
+              class="cracha-resumo-box"
+              :class="operacaoPendente === 'abastecimento' ? 'resumo-abast' : 'resumo-residuo'"
+            >
               <div class="resumo-linha">
                 <span class="resumo-label">Operação:</span>
                 <span class="resumo-val font-bold">
-                  {{ operacaoPendente === 'abastecimento' ? 'Abastecimento Químico' : 'Destinação de Resíduo' }}
+                  {{
+                    operacaoPendente === 'abastecimento'
+                      ? 'Abastecimento Químico'
+                      : 'Destinação de Resíduo'
+                  }}
                 </span>
               </div>
               <div class="resumo-linha">
                 <span class="resumo-label">Produto:</span>
                 <span class="resumo-val font-bold">
-                  {{ operacaoPendente === 'abastecimento' ? formAbast.produto : formResiduo.produto }}
+                  {{
+                    operacaoPendente === 'abastecimento' ? formAbast.produto : formResiduo.produto
+                  }}
                 </span>
               </div>
               <div class="resumo-linha">
                 <span class="resumo-label">Quantidade:</span>
                 <span class="resumo-val font-bold text-primary">
-                  {{ operacaoPendente === 'abastecimento' ? formAbast.quantidade : formResiduo.quantidade }} Kg / L
+                  {{
+                    operacaoPendente === 'abastecimento'
+                      ? formAbast.quantidade
+                      : formResiduo.quantidade
+                  }}
+                  Kg / L
                 </span>
               </div>
               <div class="resumo-linha">
                 <span class="resumo-label">Célula / Marca:</span>
                 <span class="resumo-val text-muted">
-                  {{ operacaoPendente === 'abastecimento' ? formAbast.celula : formResiduo.celula }} • 
+                  {{
+                    operacaoPendente === 'abastecimento' ? formAbast.celula : formResiduo.celula
+                  }}
+                  •
                   {{ operacaoPendente === 'abastecimento' ? formAbast.marca : formResiduo.marca }}
                 </span>
               </div>
@@ -840,7 +957,9 @@ const removerRegistroInicio = (id) => {
                   required
                   autofocus
                 />
-                <span class="field-hint-cracha">Pressione <strong>Enter</strong> ou clique em Confirmar para salvar</span>
+                <span class="field-hint-cracha"
+                  >Pressione <strong>Enter</strong> ou clique em Confirmar para salvar</span
+                >
               </div>
 
               <div v-if="erroCracha" class="alert-danger alert-cracha">
@@ -852,7 +971,11 @@ const removerRegistroInicio = (id) => {
                 <button type="button" @click="fecharModalCracha" class="btn-secondary">
                   Cancelar
                 </button>
-                <button type="submit" class="btn-primary" :class="{ 'btn-amber': operacaoPendente === 'residuo' }">
+                <button
+                  type="submit"
+                  class="btn-primary"
+                  :class="{ 'btn-amber': operacaoPendente === 'residuo' }"
+                >
                   <CheckCircle2 :size="18" /> Confirmar e Salvar
                 </button>
               </div>
@@ -870,14 +993,17 @@ const removerRegistroInicio = (id) => {
           <div class="stat-icon-wrapper indigo-glow">
             <FlaskConical :size="22" />
           </div>
-          <span class="stat-trend trend-positive">
-            <ArrowUpRight :size="14" /> Hoje
-          </span>
+          <span class="stat-trend trend-positive"> <ArrowUpRight :size="14" /> Hoje </span>
         </div>
         <div class="stat-body">
           <span class="stat-label">Total Abastecido do Dia</span>
           <div class="stat-value">
-            {{ totalAbastecidoHoje.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 3 }) }}
+            {{
+              totalAbastecidoHoje.toLocaleString('pt-BR', {
+                minimumFractionDigits: 1,
+                maximumFractionDigits: 3,
+              })
+            }}
             <span class="stat-unit">Kg / L</span>
           </div>
         </div>
@@ -889,14 +1015,17 @@ const removerRegistroInicio = (id) => {
           <div class="stat-icon-wrapper amber-glow">
             <Trash2 :size="22" />
           </div>
-          <span class="stat-trend trend-amber">
-            Hoje
-          </span>
+          <span class="stat-trend trend-amber"> Hoje </span>
         </div>
         <div class="stat-body">
           <span class="stat-label">Resíduos Destinados Hoje</span>
           <div class="stat-value">
-            {{ totalResiduosHoje.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 2 }) }}
+            {{
+              totalResiduosHoje.toLocaleString('pt-BR', {
+                minimumFractionDigits: 1,
+                maximumFractionDigits: 2,
+              })
+            }}
             <span class="stat-unit">Kg</span>
           </div>
         </div>
@@ -908,9 +1037,7 @@ const removerRegistroInicio = (id) => {
           <div class="stat-icon-wrapper emerald-glow">
             <DollarSign :size="22" />
           </div>
-          <span class="stat-trend trend-emerald">
-            Custo do Dia
-          </span>
+          <span class="stat-trend trend-emerald"> Custo do Dia </span>
         </div>
         <div class="stat-body">
           <span class="stat-label">Custo Total de Insumos Hoje</span>
@@ -944,13 +1071,15 @@ const removerRegistroInicio = (id) => {
     <div class="brands-section">
       <div class="section-title-wrap mb-3">
         <h3>Consumo Químico por Marca (Hoje)</h3>
-        <span class="section-subtitle">Distribuição do volume abastecido nas linhas no dia de hoje ({{ dataHoje }})</span>
+        <span class="section-subtitle"
+          >Distribuição do volume abastecido nas linhas no dia de hoje ({{ dataHoje }})</span
+        >
       </div>
 
       <div v-if="store.marcas && store.marcas.length > 0" class="brands-grid">
-        <div 
-          v-for="m in store.marcas" 
-          :key="m" 
+        <div
+          v-for="m in store.marcas"
+          :key="m"
           class="modern-card brand-stat-card"
           :class="`brand-card-${m.toLowerCase()}`"
         >
@@ -961,14 +1090,21 @@ const removerRegistroInicio = (id) => {
             </div>
           </div>
           <div class="brand-stat-val">
-            {{ (totaisPorMarcaHoje[m] || 0).toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 3 }) }}
+            {{
+              (totaisPorMarcaHoje[m] || 0).toLocaleString('pt-BR', {
+                minimumFractionDigits: 1,
+                maximumFractionDigits: 3,
+              })
+            }}
             <span class="brand-stat-unit">Kg/L</span>
           </div>
           <span class="brand-stat-footer">Consumido hoje</span>
         </div>
       </div>
       <div v-else class="brands-empty-alert">
-        <span>Nenhuma marca cadastrada. Acesse <strong>Cadastros</strong> para adicionar marcas.</span>
+        <span
+          >Nenhuma marca cadastrada. Acesse <strong>Cadastros</strong> para adicionar marcas.</span
+        >
       </div>
     </div>
 
@@ -977,7 +1113,9 @@ const removerRegistroInicio = (id) => {
       <div class="section-header">
         <div class="section-title-wrap">
           <h2>Movimentações de Hoje ({{ dataHoje }})</h2>
-          <span class="section-subtitle">Exibindo exclusivamente as operações registradas nesta data</span>
+          <span class="section-subtitle"
+            >Exibindo exclusivamente as operações registradas nesta data</span
+          >
         </div>
         <button @click="router.push('/registros')" class="btn-text-link">
           Ver histórico geral completo <ArrowRight :size="16" />
@@ -988,7 +1126,11 @@ const removerRegistroInicio = (id) => {
         <div v-if="registrosDoDia.length === 0" class="empty-state">
           <Calendar :size="36" class="empty-icon" />
           <h3>Nenhuma movimentação registrada hoje</h3>
-          <p>Ainda não há lançamentos de abastecimento ou resíduo para a data de hoje ({{ dataHoje }}).</p>
+          <p>
+            Ainda não há lançamentos de abastecimento ou resíduo para a data de hoje ({{
+              dataHoje
+            }}).
+          </p>
           <button @click="togglePainel('abastecimento')" class="btn-primary mt-3">
             <PlusCircle :size="16" /> Fazer Primeiro Lançamento do Dia
           </button>
@@ -1005,13 +1147,18 @@ const removerRegistroInicio = (id) => {
               <th>Crachá</th>
               <th class="text-right">Quantidade</th>
               <th class="text-right">Valor Estimado</th>
-              <th class="text-center" style="width: 60px;">Ação</th>
+              <th class="text-center" style="width: 60px">Ação</th>
             </tr>
           </thead>
           <tbody>
             <tr v-for="item in registrosDoDia" :key="item.id">
               <td>
-                <span :class="['badge', item.tipo === 'Abastecimento' ? 'badge-abastecimento' : 'badge-residuo']">
+                <span
+                  :class="[
+                    'badge',
+                    item.tipo === 'Abastecimento' ? 'badge-abastecimento' : 'badge-residuo',
+                  ]"
+                >
                   {{ item.tipo }}
                 </span>
               </td>
@@ -1020,8 +1167,8 @@ const removerRegistroInicio = (id) => {
                 {{ item.dataHora.split(' ')[1] || item.dataHora }}
               </td>
               <td>
-                <span 
-                  v-if="item.marca" 
+                <span
+                  v-if="item.marca"
                   class="badge-marca"
                   :class="`marca-${item.marca.toLowerCase()}`"
                 >
@@ -1038,17 +1185,25 @@ const removerRegistroInicio = (id) => {
                 </span>
               </td>
               <td class="text-right font-semibold">
-                {{ Number(item.qtd).toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 3 }) }}
+                {{
+                  Number(item.qtd).toLocaleString('pt-BR', {
+                    minimumFractionDigits: 1,
+                    maximumFractionDigits: 3,
+                  })
+                }}
                 <span class="unit-label">Kg/L</span>
               </td>
-              <td class="text-right font-bold" :class="item.valorTotal > 0 ? 'text-primary' : 'text-muted'">
+              <td
+                class="text-right font-bold"
+                :class="item.valorTotal > 0 ? 'text-primary' : 'text-muted'"
+              >
                 {{ item.valorTotal > 0 ? formatarMoeda(item.valorTotal) : '—' }}
               </td>
               <td class="text-center">
-                <button 
+                <button
                   type="button"
-                  @click="removerRegistroInicio(item.id)" 
-                  class="btn-icon-danger" 
+                  @click="removerRegistroInicio(item.id)"
+                  class="btn-icon-danger"
                   title="Excluir este lançamento"
                 >
                   <Trash2 :size="15" />
@@ -1140,7 +1295,7 @@ const removerRegistroInicio = (id) => {
 .btn-trigger-abast {
   background: linear-gradient(180deg, #6366f1 0%, #4f46e5 100%);
   color: #ffffff;
-  box-shadow: 
+  box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.25),
     0 1px 2px rgba(15, 23, 42, 0.08),
     0 4px 12px -2px rgba(79, 70, 229, 0.25);
@@ -1148,7 +1303,7 @@ const removerRegistroInicio = (id) => {
 
 .btn-trigger-abast:hover {
   transform: translateY(-1px);
-  box-shadow: 
+  box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.35),
     0 3px 6px rgba(15, 23, 42, 0.08),
     0 8px 18px -2px rgba(79, 70, 229, 0.38);
@@ -1157,7 +1312,7 @@ const removerRegistroInicio = (id) => {
 
 .btn-trigger-abast:active {
   transform: translateY(0px) scale(0.985);
-  box-shadow: 
+  box-shadow:
     inset 0 1px 2px rgba(0, 0, 0, 0.18),
     0 1px 3px rgba(79, 70, 229, 0.2);
 }
@@ -1165,7 +1320,7 @@ const removerRegistroInicio = (id) => {
 .btn-trigger-residuo {
   background: linear-gradient(180deg, #f59e0b 0%, #d97706 100%);
   color: #ffffff;
-  box-shadow: 
+  box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.28),
     0 1px 2px rgba(15, 23, 42, 0.08),
     0 4px 12px -2px rgba(217, 119, 6, 0.25);
@@ -1173,7 +1328,7 @@ const removerRegistroInicio = (id) => {
 
 .btn-trigger-residuo:hover {
   transform: translateY(-1px);
-  box-shadow: 
+  box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.38),
     0 3px 6px rgba(15, 23, 42, 0.08),
     0 8px 18px -2px rgba(217, 119, 6, 0.38);
@@ -1182,13 +1337,13 @@ const removerRegistroInicio = (id) => {
 
 .btn-trigger-residuo:active {
   transform: translateY(0px) scale(0.985);
-  box-shadow: 
+  box-shadow:
     inset 0 1px 2px rgba(0, 0, 0, 0.18),
     0 1px 3px rgba(217, 119, 6, 0.2);
 }
 
 .btn-trigger-abast.btn-panel-active {
-  box-shadow: 
+  box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.25),
     0 0 0 2px var(--bg-color),
     0 0 0 4px #4f46e5,
@@ -1197,7 +1352,7 @@ const removerRegistroInicio = (id) => {
 }
 
 .btn-trigger-residuo.btn-panel-active {
-  box-shadow: 
+  box-shadow:
     inset 0 1px 0 rgba(255, 255, 255, 0.25),
     0 0 0 2px var(--bg-color),
     0 0 0 4px #d97706,
@@ -1237,7 +1392,8 @@ const removerRegistroInicio = (id) => {
 }
 
 @keyframes pulse-badge-dot {
-  0%, 100% {
+  0%,
+  100% {
     opacity: 0.7;
     transform: scale(0.9);
   }
@@ -1273,7 +1429,9 @@ const removerRegistroInicio = (id) => {
   background: #ffffff;
   border-radius: var(--radius-xl);
   padding: 28px 32px;
-  box-shadow: 0 25px 60px -12px rgba(15, 23, 42, 0.4), 0 0 0 1px rgba(15, 23, 42, 0.08);
+  box-shadow:
+    0 25px 60px -12px rgba(15, 23, 42, 0.4),
+    0 0 0 1px rgba(15, 23, 42, 0.08);
   border-left: 6px solid var(--primary);
   position: relative;
   margin: auto;
@@ -1575,7 +1733,9 @@ const removerRegistroInicio = (id) => {
 
 .floating-modal-anim-enter-active .floating-modal-card,
 .floating-modal-anim-leave-active .floating-modal-card {
-  transition: transform 0.26s cubic-bezier(0.16, 1, 0.3, 1), opacity 0.24s ease;
+  transition:
+    transform 0.26s cubic-bezier(0.16, 1, 0.3, 1),
+    opacity 0.24s ease;
 }
 
 .floating-modal-anim-enter-from,

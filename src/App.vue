@@ -1,25 +1,26 @@
 <script setup>
-import { ref, nextTick } from 'vue'
-import { 
+import { ref, watch, nextTick } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
+import {
   Home,
-  LayoutDashboard, 
-  BarChart2, 
-  FlaskConical, 
-  ListFilter, 
-  ShieldCheck, 
+  LayoutDashboard,
+  FlaskConical,
+  ListFilter,
+  ShieldCheck,
   Database,
   UserCheck,
   Lock,
   LogOut,
-  Crown,
   KeyRound,
   X,
   AlertCircle,
-  IdCard
+  IdCard,
 } from 'lucide-vue-next'
 import ModalConfirmarExclusao from './components/ModalConfirmarExclusao.vue'
 import { useRegistrosStore } from './stores/registros'
 
+const route = useRoute()
+const router = useRouter()
 const store = useRegistrosStore()
 
 const modalLoginAberto = ref(false)
@@ -54,7 +55,7 @@ const executarLoginAdmin = () => {
     store.mostrarNotificacaoCentro({
       tipo: 'sucesso',
       titulo: 'Modo Administrador Ativo!',
-      mensagem: `Bem-vindo, ${res.usuario.nome}! Permissões de edição e exclusão liberadas.`
+      mensagem: `Bem-vindo, ${res.usuario.nome}! Permissões de edição e exclusão liberadas.`,
     })
   } else {
     erroLogin.value = res.msg || 'Crachá não autorizado como administrador.'
@@ -66,9 +67,26 @@ const fazerLogout = () => {
   store.mostrarNotificacaoCentro({
     tipo: 'sucesso',
     titulo: 'Sessão Encerrada',
-    mensagem: 'Você saiu do modo administrador com sucesso.'
+    mensagem: 'Você saiu do modo administrador com sucesso.',
   })
 }
+
+// Alerta se o usuário tentar acessar rota protegida sem estar logado
+watch(
+  () => route.query.loginRequired,
+  (val) => {
+    if (val === 'true') {
+      abrirModalLoginAdmin()
+      store.mostrarNotificacaoCentro({
+        tipo: 'alerta',
+        titulo: 'Acesso Restrito',
+        mensagem: 'Esta página requer perfil de Administrador. Identifique-se com seu crachá.',
+      })
+      router.replace({ path: route.path, query: {} })
+    }
+  },
+  { immediate: true },
+)
 </script>
 
 <template>
@@ -86,7 +104,7 @@ const fazerLogout = () => {
         </div>
         <p class="company-tag">Indústria de Calçados</p>
       </div>
-      
+
       <nav class="menu">
         <span class="menu-label">MENU PRINCIPAL</span>
         <router-link to="/">
@@ -111,7 +129,7 @@ const fazerLogout = () => {
           <div class="link-content">
             <LayoutDashboard :size="19" />
             <span>Dashboard</span>
-            <span class="badge-dev-pill">Em breve</span>
+            <span class="badge-dev-pill">Em dev</span>
           </div>
         </router-link>
 
@@ -167,11 +185,7 @@ const fazerLogout = () => {
     <!-- Modal de Login -->
     <Teleport to="body">
       <Transition name="fade">
-        <div 
-          v-if="modalLoginAberto" 
-          class="admin-modal-backdrop"
-          @click.self="fecharModalLogin"
-        >
+        <div v-if="modalLoginAberto" class="admin-modal-backdrop" @click.self="fecharModalLogin">
           <div class="admin-modal-card">
             <div class="admin-modal-header">
               <div class="admin-modal-icon">
@@ -181,7 +195,12 @@ const fazerLogout = () => {
                 <h3>Login</h3>
                 <p>Identifique-se com o crachá de administrador para liberar edição e exclusão</p>
               </div>
-              <button type="button" @click="fecharModalLogin" class="btn-close-modal" title="Fechar">
+              <button
+                type="button"
+                @click="fecharModalLogin"
+                class="btn-close-modal"
+                title="Fechar"
+              >
                 <X :size="20" />
               </button>
             </div>
@@ -230,30 +249,30 @@ const fazerLogout = () => {
   --primary-gradient: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
   --primary-light: #eef2ff;
   --primary-glow: rgba(99, 102, 241, 0.25);
-  
+
   --accent-cyan: #06b6d4;
   --accent-emerald: #10b981;
   --accent-amber: #f59e0b;
   --accent-rose: #f43f5e;
-  
+
   --bg-color: #f8fafc;
   --sidebar-bg: #0b0f19;
   --sidebar-surface: #131b2e;
   --sidebar-border: rgba(255, 255, 255, 0.07);
-  
+
   --text-main: #0f172a;
   --text-muted: #64748b;
   --text-light: #94a3b8;
-  
+
   --border: #e2e8f0;
   --border-focus: #818cf8;
   --card-bg: #ffffff;
-  
+
   --radius-sm: 8px;
   --radius-md: 12px;
   --radius-lg: 16px;
   --radius-xl: 20px;
-  
+
   --shadow-sm: 0 1px 2px 0 rgba(0, 0, 0, 0.05);
   --shadow-md: 0 4px 6px -1px rgba(15, 23, 42, 0.08), 0 2px 4px -2px rgba(15, 23, 42, 0.04);
   --shadow-lg: 0 10px 25px -5px rgba(15, 23, 42, 0.08), 0 8px 10px -6px rgba(15, 23, 42, 0.04);
@@ -272,7 +291,11 @@ html {
   margin: 0;
   padding: 0;
   box-sizing: border-box;
-  font-family: 'Plus Jakarta Sans', system-ui, -apple-system, sans-serif;
+  font-family:
+    'Plus Jakarta Sans',
+    system-ui,
+    -apple-system,
+    sans-serif;
 }
 
 body {
@@ -346,7 +369,7 @@ body {
 .logo-text h2 span {
   background: linear-gradient(135deg, #818cf8 0%, #06b6d4 100%);
   -webkit-background-clip: text;
--webkit-text-fill-color: transparent;
+  -webkit-text-fill-color: transparent;
 }
 
 .badge-version {
@@ -564,7 +587,9 @@ body {
   cursor: pointer;
   opacity: 0.65;
   font-size: 1.05rem;
-  transition: opacity 0.2s, transform 0.2s;
+  transition:
+    opacity 0.2s,
+    transform 0.2s;
 }
 
 .modern-input[list]::-webkit-calendar-picker-indicator:hover {
@@ -680,8 +705,14 @@ body {
 }
 
 @keyframes slideDown {
-  from { opacity: 0; transform: translateY(-8px); }
-  to { opacity: 1; transform: translateY(0); }
+  from {
+    opacity: 0;
+    transform: translateY(-8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 /* ---------------------------------------------------- */
@@ -693,6 +724,18 @@ body {
   background: rgba(16, 185, 129, 0.2);
   color: #34d399;
   border: 1px solid rgba(16, 185, 129, 0.35);
+  padding: 2px 7px;
+  border-radius: 9999px;
+  font-weight: 700;
+  letter-spacing: 0.4px;
+}
+
+.badge-dev-pill {
+  margin-left: auto;
+  font-size: 0.68rem;
+  background: rgba(245, 158, 11, 0.18);
+  color: #fbbf24;
+  border: 1px solid rgba(245, 158, 11, 0.35);
   padding: 2px 7px;
   border-radius: 9999px;
   font-weight: 700;

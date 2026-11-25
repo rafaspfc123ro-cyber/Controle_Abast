@@ -1,12 +1,6 @@
 <script setup>
 import { ref, nextTick } from 'vue'
-import { 
-  ShieldCheck, 
-  UserPlus, 
-  Trash2, 
-  AlertCircle,
-  X
-} from 'lucide-vue-next'
+import { ShieldCheck, UserPlus, Trash2, AlertCircle, X } from 'lucide-vue-next'
 import { useRegistrosStore } from '../stores/registros'
 
 const store = useRegistrosStore()
@@ -16,7 +10,7 @@ const inputCrachaModalRef = ref(null)
 
 const novoAdmin = ref({
   cracha: '',
-  nome: ''
+  nome: '',
 })
 
 const feedback = ref({ tipo: '', msg: '' })
@@ -41,7 +35,7 @@ const salvarAdmin = () => {
 
   const res = store.adicionarAdmin({
     cracha: novoAdmin.value.cracha,
-    nome: novoAdmin.value.nome
+    nome: novoAdmin.value.nome,
   })
 
   if (res.ok) {
@@ -49,7 +43,7 @@ const salvarAdmin = () => {
     store.mostrarNotificacaoCentro({
       tipo: 'sucesso',
       titulo: 'Colaborador Autorizado!',
-      mensagem: `${novoAdmin.value.nome} agora possui permissão de edição e exclusão.`
+      mensagem: `${novoAdmin.value.nome} agora possui permissão de edição e exclusão.`,
     })
   } else {
     feedback.value = { tipo: 'erro', msg: res.msg }
@@ -61,7 +55,7 @@ const removerAcesso = (admin) => {
     store.mostrarNotificacaoCentro({
       tipo: 'erro',
       titulo: 'Ação Não Permitida',
-      mensagem: 'O usuário Master principal não pode ter sua permissão revogada.'
+      mensagem: 'O usuário Master principal não pode ter sua permissão revogada.',
     })
     return
   }
@@ -74,9 +68,9 @@ const removerAcesso = (admin) => {
       const res = store.removerAdmin(admin.cracha)
       return {
         titulo: res.ok ? 'Permissão Revogada!' : 'Atenção',
-        msg: res.msg
+        msg: res.msg,
       }
-    }
+    },
   })
 }
 
@@ -108,7 +102,9 @@ if (typeof window !== 'undefined') {
         <ShieldCheck :size="18" class="master-info-icon" />
         <div>
           <span class="master-info-label">Administrador Master:</span>
-          <strong class="master-info-name">{{ store.usuarioAdminLogado?.nome || 'Rafael Oliveira da Silva' }}</strong>
+          <strong class="master-info-name">{{
+            store.usuarioAdminLogado?.nome || 'Rafael Oliveira da Silva'
+          }}</strong>
         </div>
       </div>
       <span class="master-info-badge">Acesso Permanente</span>
@@ -145,13 +141,17 @@ if (typeof window !== 'undefined') {
                 </td>
                 <td>
                   <div class="nivel-cell-wrap">
-                    <span :class="adm.isMaster || adm.cracha === '3014716' ? 'badge-master' : 'badge-admin'">
+                    <span
+                      :class="
+                        adm.isMaster || adm.cracha === '3014716' ? 'badge-master' : 'badge-admin'
+                      "
+                    >
                       {{ adm.isMaster || adm.cracha === '3014716' ? 'Master' : 'Admin' }}
                     </span>
-                    <button 
+                    <button
                       v-if="!adm.isMaster && adm.cracha !== '3014716'"
-                      type="button" 
-                      @click="removerAcesso(adm)" 
+                      type="button"
+                      @click="removerAcesso(adm)"
                       class="btn-icon-danger"
                       title="Remover permissão deste colaborador"
                     >
@@ -169,11 +169,7 @@ if (typeof window !== 'undefined') {
     <!-- Modal Adicionar Nova Pessoa -->
     <Teleport to="body">
       <Transition name="fade">
-        <div 
-          v-if="modalAddAberto" 
-          class="user-modal-backdrop"
-          @click.self="fecharModalAdd"
-        >
+        <div v-if="modalAddAberto" class="user-modal-backdrop" @click.self="fecharModalAdd">
           <div class="user-modal-card">
             <div class="user-modal-header">
               <div class="user-modal-icon">
@@ -530,7 +526,13 @@ if (typeof window !== 'undefined') {
 }
 
 @keyframes zoomIn {
-  from { opacity: 0; transform: scale(0.96); }
-  to { opacity: 1; transform: scale(1); }
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 </style>
