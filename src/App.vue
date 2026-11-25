@@ -314,16 +314,20 @@ body {
 .sidebar {
   width: 270px;
   background-color: var(--sidebar-bg);
-  border-right: 1px solid var(--sidebar-border);
+  border: 1px solid var(--sidebar-border);
+  border-radius: 20px;
+  margin: 12px 0 12px 14px;
+  height: calc(100vh - 24px);
+  position: sticky;
+  top: 12px;
   padding: 24px 16px;
   color: white;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
   flex-shrink: 0;
-  position: sticky;
-  top: 0;
-  height: 100vh;
+  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.2);
+  z-index: 50;
 }
 
 .sidebar-header {

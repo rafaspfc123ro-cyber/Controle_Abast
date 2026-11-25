@@ -357,27 +357,6 @@ const totaisPorMarcaHoje = computed(() => {
 const formatarMoeda = (valor) => {
   return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valor || 0)
 }
-
-const removerRegistroInicio = (id) => {
-  const item = store.registros.find((r) => r.id === id)
-  const itemDesc = item
-    ? `${item.tipo}: ${item.produto} • ${Number(item.qtd).toLocaleString('pt-BR')} Kg/L (${item.marca || item.celula})`
-    : `Lançamento #${id}`
-
-  store.abrirConfirmacaoExclusao({
-    titulo: 'Excluir Movimentação de Hoje',
-    descricao:
-      'Tem certeza que deseja excluir esta movimentação? Os totais do dia e relatórios serão recalculados automaticamente.',
-    itemNome: itemDesc,
-    onConfirm: () => {
-      store.removerRegistro(id)
-      return {
-        titulo: 'Lançamento Removido!',
-        msg: 'A movimentação foi excluída com sucesso e o painel de hoje foi atualizado.',
-      }
-    },
-  })
-}
 </script>
 
 <template>
@@ -1147,7 +1126,6 @@ const removerRegistroInicio = (id) => {
               <th>Crachá</th>
               <th class="text-right">Quantidade</th>
               <th class="text-right">Valor Estimado</th>
-              <th class="text-center" style="width: 60px">Ação</th>
             </tr>
           </thead>
           <tbody>
@@ -1198,16 +1176,6 @@ const removerRegistroInicio = (id) => {
                 :class="item.valorTotal > 0 ? 'text-primary' : 'text-muted'"
               >
                 {{ item.valorTotal > 0 ? formatarMoeda(item.valorTotal) : '—' }}
-              </td>
-              <td class="text-center">
-                <button
-                  type="button"
-                  @click="removerRegistroInicio(item.id)"
-                  class="btn-icon-danger"
-                  title="Excluir este lançamento"
-                >
-                  <Trash2 :size="15" />
-                </button>
               </td>
             </tr>
           </tbody>

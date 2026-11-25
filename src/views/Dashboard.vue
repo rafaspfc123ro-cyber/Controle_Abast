@@ -1,40 +1,19 @@
 <script setup>
-import { useRouter } from 'vue-router'
-import {
-  Construction,
-  Clock,
-  Sparkles,
-  BarChart3,
-  TrendingUp,
-  Trash2,
-  DollarSign,
-  ArrowLeft,
-  ListFilter,
-  PlusCircle,
-} from 'lucide-vue-next'
-
-const router = useRouter()
+import { Construction, Clock } from 'lucide-vue-next'
 </script>
 
 <template>
   <div class="dashboard-page">
     <!-- Header -->
-    <div class="page-header header-with-actions">
-      <div>
-        <div class="header-badge badge-dev">
-          <Clock :size="15" />
-          <span>Status: Em Desenvolvimento</span>
-        </div>
-        <h1 class="page-title">Painel de Indicadores (Dashboard)</h1>
-        <p class="page-subtitle">
-          Módulo analítico e indicadores de inteligência operacional em fase de desenvolvimento
-        </p>
+    <div class="page-header">
+      <div class="header-badge badge-dev">
+        <Clock :size="15" />
+        <span>Status: Em Desenvolvimento</span>
       </div>
-      <div class="header-actions">
-        <button @click="router.push('/')" class="btn-secondary">
-          <ArrowLeft :size="18" /> Voltar ao Início
-        </button>
-      </div>
+      <h1 class="page-title">Painel de Indicadores (Dashboard)</h1>
+      <p class="page-subtitle">
+        Módulo analítico e indicadores de inteligência operacional em fase de desenvolvimento
+      </p>
     </div>
 
     <!-- Card Principal de Status Em Desenvolvimento -->
@@ -43,7 +22,7 @@ const router = useRouter()
         <div class="dev-icon-container">
           <div class="dev-icon-glow"></div>
           <div class="dev-icon-box">
-            <Construction :size="46" class="dev-icon" />
+            <Construction :size="48" class="dev-icon" />
           </div>
         </div>
 
@@ -67,79 +46,6 @@ const router = useRouter()
           </p>
         </div>
       </div>
-
-      <!-- Divisor elegante -->
-      <div class="dev-divider"></div>
-
-      <!-- Preview de Módulos e Funcionalidades Planejadas -->
-      <div class="upcoming-wrapper">
-        <div class="upcoming-header">
-          <div class="upcoming-title-box">
-            <Sparkles :size="20" class="text-amber" />
-            <h3>O que estará disponível neste Dashboard</h3>
-          </div>
-          <span class="upcoming-subtitle">Recursos analíticos em fase de implementação</span>
-        </div>
-
-        <div class="upcoming-grid">
-          <!-- Card 1 -->
-          <div class="upcoming-card">
-            <div class="upcoming-card-icon icon-indigo">
-              <BarChart3 :size="22" />
-            </div>
-            <div class="upcoming-card-body">
-              <h4>Consumo em Tempo Real</h4>
-              <p>Métricas de volume consumido por turno, data, operador e produto químico aplicado.</p>
-            </div>
-          </div>
-
-          <!-- Card 2 -->
-          <div class="upcoming-card">
-            <div class="upcoming-card-icon icon-emerald">
-              <TrendingUp :size="22" />
-            </div>
-            <div class="upcoming-card-body">
-              <h4>Distribuição por Marca & Célula</h4>
-              <p>Relatórios consolidados de insumos por marcas parceiras e linhas de montagem ativas.</p>
-            </div>
-          </div>
-
-          <!-- Card 3 -->
-          <div class="upcoming-card">
-            <div class="upcoming-card-icon icon-amber">
-              <Trash2 :size="22" />
-            </div>
-            <div class="upcoming-card-body">
-              <h4>Gestão & Balanço de Resíduos</h4>
-              <p>Monitoramento de taxas de descarte químico e aderência aos padrões de sustentabilidade ambiental.</p>
-            </div>
-          </div>
-
-          <!-- Card 4 -->
-          <div class="upcoming-card">
-            <div class="upcoming-card-icon icon-violet">
-              <DollarSign :size="22" />
-            </div>
-            <div class="upcoming-card-body">
-              <h4>Custos & Estimativa Financeira</h4>
-              <p>Visão financeira detalhada do investimento em adesivos, solventes e catalisadores.</p>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- Ações de Navegação Recomendadas -->
-      <div class="dev-footer-actions">
-        <button @click="router.push('/')" class="btn-primary">
-          <ArrowLeft :size="18" /> Voltar ao Painel Principal
-        </button>
-        <button @click="router.push('/registros')" class="btn-secondary">
-          <ListFilter :size="18" /> Consultar Histórico de Registros
-        </button>
-        <button @click="router.push('/abastecimento')" class="btn-secondary">
-          <PlusCircle :size="18" /> Novo Abastecimento
-        </button>
-      </div>
     </div>
   </div>
 </template>
@@ -154,12 +60,8 @@ const router = useRouter()
   width: 100%;
 }
 
-.header-with-actions {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  flex-wrap: wrap;
-  gap: 16px;
+.page-header {
+  margin-bottom: 0;
 }
 
 .header-badge.badge-dev {
@@ -178,10 +80,9 @@ const router = useRouter()
 }
 
 .dev-hero-card {
-  padding: 40px;
+  padding: 44px;
   display: flex;
   flex-direction: column;
-  gap: 32px;
   border-radius: var(--radius-lg);
   border: 1px solid #e2e8f0;
   background: #ffffff;
@@ -196,6 +97,9 @@ const router = useRouter()
 }
 
 @media (max-width: 768px) {
+  .dev-hero-card {
+    padding: 28px 20px;
+  }
   .dev-hero-top {
     flex-direction: column;
     align-items: center;
@@ -218,8 +122,8 @@ const router = useRouter()
 
 .dev-icon-box {
   position: relative;
-  width: 88px;
-  height: 88px;
+  width: 92px;
+  height: 92px;
   border-radius: 24px;
   background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
   border: 2px solid #fde68a;
@@ -255,6 +159,12 @@ const router = useRouter()
   align-items: center;
   gap: 10px;
   flex-wrap: wrap;
+}
+
+@media (max-width: 768px) {
+  .status-chip-row {
+    justify-content: center;
+  }
 }
 
 .status-pill-dev {
@@ -320,143 +230,5 @@ const router = useRouter()
   color: var(--text-muted);
   max-width: 900px;
   margin: 0;
-}
-
-.dev-divider {
-  height: 1px;
-  background: #f1f5f9;
-  width: 100%;
-}
-
-/* Seção de Funcionalidades Futuras */
-.upcoming-wrapper {
-  display: flex;
-  flex-direction: column;
-  gap: 20px;
-}
-
-.upcoming-header {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.upcoming-title-box {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
-.upcoming-title-box h3 {
-  font-size: 1.15rem;
-  font-weight: 700;
-  color: var(--text-main);
-  margin: 0;
-}
-
-.text-amber {
-  color: #d97706;
-}
-
-.upcoming-subtitle {
-  font-size: 0.85rem;
-  color: var(--text-muted);
-}
-
-.upcoming-grid {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
-  gap: 16px;
-}
-
-@media (max-width: 860px) {
-  .upcoming-grid {
-    grid-template-columns: 1fr;
-  }
-}
-
-.upcoming-card {
-  display: flex;
-  align-items: flex-start;
-  gap: 16px;
-  padding: 20px;
-  border-radius: var(--radius-md);
-  background: #f8fafc;
-  border: 1px solid #edf2f7;
-  transition: all 0.2s ease;
-}
-
-.upcoming-card:hover {
-  background: #ffffff;
-  border-color: #cbd5e1;
-  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05);
-  transform: translateY(-2px);
-}
-
-.upcoming-card-icon {
-  width: 44px;
-  height: 44px;
-  border-radius: 12px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-}
-
-.icon-indigo {
-  background: #eef2ff;
-  color: #4f46e5;
-}
-
-.icon-emerald {
-  background: #ecfdf5;
-  color: #059669;
-}
-
-.icon-amber {
-  background: #fef3c7;
-  color: #d97706;
-}
-
-.icon-violet {
-  background: #f3e8ff;
-  color: #7c3aed;
-}
-
-.upcoming-card-body h4 {
-  font-size: 0.96rem;
-  font-weight: 700;
-  color: var(--text-main);
-  margin-bottom: 4px;
-}
-
-.upcoming-card-body p {
-  font-size: 0.85rem;
-  color: var(--text-muted);
-  line-height: 1.45;
-  margin: 0;
-}
-
-/* Rodapé com Ações */
-.dev-footer-actions {
-  display: flex;
-  align-items: center;
-  gap: 14px;
-  flex-wrap: wrap;
-  padding-top: 8px;
-}
-
-@media (max-width: 600px) {
-  .dev-hero-card {
-    padding: 24px;
-  }
-  .dev-footer-actions {
-    flex-direction: column;
-    width: 100%;
-  }
-  .dev-footer-actions button {
-    width: 100%;
-    justify-content: center;
-  }
 }
 </style>
