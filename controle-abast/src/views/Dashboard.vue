@@ -1,33 +1,19 @@
 <script setup>
-import { computed } from 'vue'
 import { useRouter } from 'vue-router'
-import { 
-  FlaskConical, 
-  Trash2, 
-  Activity, 
-  ArrowUpRight, 
-  PlusCircle, 
-  Calendar, 
-  ArrowRight, 
-  IdCard, 
-  Tag, 
-  DollarSign
+import {
+  Construction,
+  Clock,
+  Sparkles,
+  BarChart3,
+  TrendingUp,
+  Trash2,
+  DollarSign,
+  ArrowLeft,
+  ListFilter,
+  PlusCircle,
 } from 'lucide-vue-next'
-import { useRegistrosStore } from '../stores/registros'
 
 const router = useRouter()
-const store = useRegistrosStore()
-
-const totalOperacoes = computed(() => store.registros.length)
-
-// Últimos 6 registros
-const ultimosRegistros = computed(() => {
-  return store.registros.slice(0, 6)
-})
-
-const formatarMoeda = (valor) => {
-  return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(valor || 0)
-}
 </script>
 
 <template>
@@ -35,190 +21,124 @@ const formatarMoeda = (valor) => {
     <!-- Header -->
     <div class="page-header header-with-actions">
       <div>
-        <div class="header-badge">
-          <FlaskConical :size="15" />
-          <span>Setor Químico • Calçados</span>
+        <div class="header-badge badge-dev">
+          <Clock :size="15" />
+          <span>Status: Em Desenvolvimento</span>
         </div>
-        <h1 class="page-title">Painel de Controle</h1>
-        <p class="page-subtitle">Acompanhamento do abastecimento de insumos químicos por marca, célula e operador</p>
+        <h1 class="page-title">Painel de Indicadores (Dashboard)</h1>
+        <p class="page-subtitle">
+          Módulo analítico e indicadores de inteligência operacional em fase de desenvolvimento
+        </p>
       </div>
       <div class="header-actions">
-        <button @click="router.push('/abastecimento')" class="btn-primary">
+        <button @click="router.push('/')" class="btn-secondary">
+          <ArrowLeft :size="18" /> Voltar ao Início
+        </button>
+      </div>
+    </div>
+
+    <!-- Card Principal de Status Em Desenvolvimento -->
+    <div class="modern-card dev-hero-card">
+      <div class="dev-hero-top">
+        <div class="dev-icon-container">
+          <div class="dev-icon-glow"></div>
+          <div class="dev-icon-box">
+            <Construction :size="46" class="dev-icon" />
+          </div>
+        </div>
+
+        <div class="dev-content-header">
+          <div class="status-chip-row">
+            <span class="status-pill-dev">
+              <span class="status-pulse-dot"></span>
+              Em Desenvolvimento
+            </span>
+            <span class="version-pill">
+              <Clock :size="13" />
+              Versão Beta em Breve
+            </span>
+          </div>
+
+          <h2 class="dev-title">Indicadores e Gráficos em Construção</h2>
+          <p class="dev-description">
+            Os dados estatísticos, métricas de consumo e relatórios visuais estão temporariamente desabilitados 
+            nesta seção. Nossa equipe está estruturando novos modelos analíticos de balanceamento de insumos químicos, 
+            indicadores por linha de montagem e consolidação de estoque para a indústria calçadista.
+          </p>
+        </div>
+      </div>
+
+      <!-- Divisor elegante -->
+      <div class="dev-divider"></div>
+
+      <!-- Preview de Módulos e Funcionalidades Planejadas -->
+      <div class="upcoming-wrapper">
+        <div class="upcoming-header">
+          <div class="upcoming-title-box">
+            <Sparkles :size="20" class="text-amber" />
+            <h3>O que estará disponível neste Dashboard</h3>
+          </div>
+          <span class="upcoming-subtitle">Recursos analíticos em fase de implementação</span>
+        </div>
+
+        <div class="upcoming-grid">
+          <!-- Card 1 -->
+          <div class="upcoming-card">
+            <div class="upcoming-card-icon icon-indigo">
+              <BarChart3 :size="22" />
+            </div>
+            <div class="upcoming-card-body">
+              <h4>Consumo em Tempo Real</h4>
+              <p>Métricas de volume consumido por turno, data, operador e produto químico aplicado.</p>
+            </div>
+          </div>
+
+          <!-- Card 2 -->
+          <div class="upcoming-card">
+            <div class="upcoming-card-icon icon-emerald">
+              <TrendingUp :size="22" />
+            </div>
+            <div class="upcoming-card-body">
+              <h4>Distribuição por Marca & Célula</h4>
+              <p>Relatórios consolidados de insumos por marcas parceiras e linhas de montagem ativas.</p>
+            </div>
+          </div>
+
+          <!-- Card 3 -->
+          <div class="upcoming-card">
+            <div class="upcoming-card-icon icon-amber">
+              <Trash2 :size="22" />
+            </div>
+            <div class="upcoming-card-body">
+              <h4>Gestão & Balanço de Resíduos</h4>
+              <p>Monitoramento de taxas de descarte químico e aderência aos padrões de sustentabilidade ambiental.</p>
+            </div>
+          </div>
+
+          <!-- Card 4 -->
+          <div class="upcoming-card">
+            <div class="upcoming-card-icon icon-violet">
+              <DollarSign :size="22" />
+            </div>
+            <div class="upcoming-card-body">
+              <h4>Custos & Estimativa Financeira</h4>
+              <p>Visão financeira detalhada do investimento em adesivos, solventes e catalisadores.</p>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Ações de Navegação Recomendadas -->
+      <div class="dev-footer-actions">
+        <button @click="router.push('/')" class="btn-primary">
+          <ArrowLeft :size="18" /> Voltar ao Painel Principal
+        </button>
+        <button @click="router.push('/registros')" class="btn-secondary">
+          <ListFilter :size="18" /> Consultar Histórico de Registros
+        </button>
+        <button @click="router.push('/abastecimento')" class="btn-secondary">
           <PlusCircle :size="18" /> Novo Abastecimento
         </button>
-      </div>
-    </div>
-
-    <!-- Cards Principais de Métricas -->
-    <div class="stats-grid">
-      <!-- Total Abastecido -->
-      <div class="modern-card stat-card card-indigo">
-        <div class="stat-top">
-          <div class="stat-icon-wrapper indigo-glow">
-            <FlaskConical :size="22" />
-          </div>
-          <span class="stat-trend trend-positive">
-            <ArrowUpRight :size="14" /> Químicos
-          </span>
-        </div>
-        <div class="stat-body">
-          <span class="stat-label">Total Abastecido</span>
-          <div class="stat-value">
-            {{ store.totalAbastecido.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 3 }) }}
-            <span class="stat-unit">Kg / L</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Resíduos Coletados -->
-      <div class="modern-card stat-card card-amber">
-        <div class="stat-top">
-          <div class="stat-icon-wrapper amber-glow">
-            <Trash2 :size="22" />
-          </div>
-          <span class="stat-trend trend-amber">
-            Ambiental
-          </span>
-        </div>
-        <div class="stat-body">
-          <span class="stat-label">Resíduos Químicos Destinados</span>
-          <div class="stat-value">
-            {{ store.totalResiduos.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 2 }) }}
-            <span class="stat-unit">Kg</span>
-          </div>
-        </div>
-      </div>
-
-      <!-- Custos Totais em Insumos -->
-      <div class="modern-card stat-card card-emerald">
-        <div class="stat-top">
-          <div class="stat-icon-wrapper emerald-glow">
-            <DollarSign :size="22" />
-          </div>
-          <span class="stat-trend trend-emerald">
-            Valor Estimado
-          </span>
-        </div>
-        <div class="stat-body">
-          <span class="stat-label">Custo Total de Insumos</span>
-          <div class="stat-value">
-            {{ formatarMoeda(store.custosTotais) }}
-          </div>
-        </div>
-      </div>
-
-      <!-- Operações Registradas -->
-      <div class="modern-card stat-card card-violet">
-        <div class="stat-top">
-          <div class="stat-icon-wrapper violet-glow">
-            <Activity :size="22" />
-          </div>
-          <span class="stat-trend trend-violet">
-            Geral
-          </span>
-        </div>
-        <div class="stat-body">
-          <span class="stat-label">Lançamentos Realizados</span>
-          <div class="stat-value">
-            {{ totalOperacoes }}
-            <span class="stat-unit">reg.</span>
-          </div>
-        </div>
-      </div>
-    </div>
-
-    <!-- Abastecimento por Marca (Dinâmico a partir dos Cadastros) -->
-    <div class="brands-section">
-      <div class="section-title-wrap mb-3">
-        <h3>Volume Abastecido por Marca</h3>
-        <span class="section-subtitle">Distribuição do consumo químico nas linhas de produção de calçados</span>
-      </div>
-
-      <div class="brands-grid">
-        <div 
-          v-for="m in store.marcas" 
-          :key="m" 
-          class="modern-card brand-stat-card"
-          :class="`brand-card-${m.toLowerCase()}`"
-        >
-          <div class="brand-stat-header">
-            <span class="brand-pill-name">{{ m }}</span>
-            <Tag :size="16" class="brand-icon-tag" />
-          </div>
-          <div class="brand-stat-val">
-            {{ (store.totaisPorMarca[m] || 0).toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 3 }) }}
-            <span class="brand-stat-unit">Kg/L</span>
-          </div>
-          <span class="brand-stat-footer">Insumos químicos aplicados</span>
-        </div>
-      </div>
-    </div>
-
-    <!-- Tabela de Movimentações Recentes -->
-    <div class="dashboard-section">
-      <div class="section-header">
-        <div class="section-title-wrap">
-          <h2>Últimas Movimentações Químicas</h2>
-          <span class="section-subtitle">Abastecimentos e descartes mais recentes</span>
-        </div>
-        <button @click="router.push('/registros')" class="btn-text-link">
-          Ver histórico completo <ArrowRight :size="16" />
-        </button>
-      </div>
-
-      <div class="modern-card table-card">
-        <div v-if="ultimosRegistros.length === 0" class="empty-state">
-          <p>Nenhuma movimentação registrada no sistema.</p>
-        </div>
-
-        <table v-else class="modern-table">
-          <thead>
-            <tr>
-              <th>Tipo</th>
-              <th>Data & Hora</th>
-              <th>Marca</th>
-              <th>Célula</th>
-              <th>Produto Químico</th>
-              <th>Crachá</th>
-              <th class="text-right">Quantidade</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr v-for="item in ultimosRegistros" :key="item.id">
-              <td>
-                <span :class="['badge', item.tipo === 'Abastecimento' ? 'badge-abastecimento' : 'badge-residuo']">
-                  {{ item.tipo }}
-                </span>
-              </td>
-              <td class="cell-date">
-                <Calendar :size="14" />
-                {{ item.dataHora }}
-              </td>
-              <td>
-                <span 
-                  v-if="item.marca" 
-                  class="badge-marca"
-                  :class="`marca-${item.marca.toLowerCase()}`"
-                >
-                  {{ item.marca }}
-                </span>
-                <span v-else class="text-muted">—</span>
-              </td>
-              <td class="font-medium">{{ item.celula }}</td>
-              <td>{{ item.produto }}</td>
-              <td>
-                <span class="cracha-tag">
-                  <IdCard :size="13" />
-                  {{ item.cracha || item.nome || '—' }}
-                </span>
-              </td>
-              <td class="text-right font-semibold">
-                {{ Number(item.qtd).toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 3 }) }}
-                <span class="unit-label">Kg/L</span>
-              </td>
-            </tr>
-          </tbody>
-        </table>
       </div>
     </div>
   </div>
@@ -228,7 +148,10 @@ const formatarMoeda = (valor) => {
 .dashboard-page {
   display: flex;
   flex-direction: column;
-  gap: 32px;
+  gap: 28px;
+  max-width: 1400px;
+  margin: 0 auto;
+  width: 100%;
 }
 
 .header-with-actions {
@@ -239,403 +162,301 @@ const formatarMoeda = (valor) => {
   gap: 16px;
 }
 
-.header-badge {
+.header-badge.badge-dev {
   display: inline-flex;
   align-items: center;
   gap: 8px;
-  background: #ede9fe;
-  color: #6d28d9;
-  padding: 5px 12px;
+  background: #fef3c7;
+  color: #b45309;
+  padding: 6px 14px;
   border-radius: 9999px;
-  font-size: 0.78rem;
+  font-size: 0.82rem;
   font-weight: 700;
   letter-spacing: 0.3px;
   margin-bottom: 8px;
-  border: 1px solid #ddd6fe;
+  border: 1px solid #fde68a;
 }
 
-/* Grid de Estatísticas Principais */
-.stats-grid {
-  display: grid;
-  grid-template-columns: repeat(4, 1fr);
-  gap: 22px;
+.dev-hero-card {
+  padding: 40px;
+  display: flex;
+  flex-direction: column;
+  gap: 32px;
+  border-radius: var(--radius-lg);
+  border: 1px solid #e2e8f0;
+  background: #ffffff;
+  position: relative;
+  box-shadow: 0 10px 30px -5px rgba(15, 23, 42, 0.05);
 }
 
-@media (max-width: 1300px) {
-  .stats-grid {
-    grid-template-columns: repeat(2, 1fr);
+.dev-hero-top {
+  display: flex;
+  gap: 32px;
+  align-items: flex-start;
+}
+
+@media (max-width: 768px) {
+  .dev-hero-top {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
   }
 }
 
-@media (max-width: 680px) {
-  .stats-grid {
+.dev-icon-container {
+  position: relative;
+  flex-shrink: 0;
+}
+
+.dev-icon-glow {
+  position: absolute;
+  inset: -8px;
+  background: radial-gradient(circle, rgba(245, 158, 11, 0.25) 0%, rgba(245, 158, 11, 0) 70%);
+  border-radius: 50%;
+  filter: blur(10px);
+}
+
+.dev-icon-box {
+  position: relative;
+  width: 88px;
+  height: 88px;
+  border-radius: 24px;
+  background: linear-gradient(135deg, #fffbeb 0%, #fef3c7 100%);
+  border: 2px solid #fde68a;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  color: #d97706;
+  box-shadow: 0 8px 20px -4px rgba(217, 119, 6, 0.2);
+}
+
+.dev-icon {
+  animation: gentle-bounce 3s ease-in-out infinite;
+}
+
+@keyframes gentle-bounce {
+  0%, 100% {
+    transform: translateY(0);
+  }
+  50% {
+    transform: translateY(-4px);
+  }
+}
+
+.dev-content-header {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  flex: 1;
+}
+
+.status-chip-row {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  flex-wrap: wrap;
+}
+
+.status-pill-dev {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: #fef3c7;
+  color: #b45309;
+  border: 1px solid #fde68a;
+  padding: 4px 12px;
+  border-radius: 9999px;
+  font-size: 0.8rem;
+  font-weight: 700;
+}
+
+.status-pulse-dot {
+  width: 8px;
+  height: 8px;
+  background-color: #d97706;
+  border-radius: 50%;
+  animation: pulse-dot 1.8s infinite;
+}
+
+@keyframes pulse-dot {
+  0% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(217, 119, 6, 0.7);
+  }
+  70% {
+    transform: scale(1);
+    box-shadow: 0 0 0 6px rgba(217, 119, 6, 0);
+  }
+  100% {
+    transform: scale(0.95);
+    box-shadow: 0 0 0 0 rgba(217, 119, 6, 0);
+  }
+}
+
+.version-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: #f1f5f9;
+  color: #475569;
+  border: 1px solid #e2e8f0;
+  padding: 4px 12px;
+  border-radius: 9999px;
+  font-size: 0.8rem;
+  font-weight: 600;
+}
+
+.dev-title {
+  font-size: 1.65rem;
+  font-weight: 800;
+  color: var(--text-main);
+  letter-spacing: -0.5px;
+  margin: 0;
+}
+
+.dev-description {
+  font-size: 1rem;
+  line-height: 1.6;
+  color: var(--text-muted);
+  max-width: 900px;
+  margin: 0;
+}
+
+.dev-divider {
+  height: 1px;
+  background: #f1f5f9;
+  width: 100%;
+}
+
+/* Seção de Funcionalidades Futuras */
+.upcoming-wrapper {
+  display: flex;
+  flex-direction: column;
+  gap: 20px;
+}
+
+.upcoming-header {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.upcoming-title-box {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.upcoming-title-box h3 {
+  font-size: 1.15rem;
+  font-weight: 700;
+  color: var(--text-main);
+  margin: 0;
+}
+
+.text-amber {
+  color: #d97706;
+}
+
+.upcoming-subtitle {
+  font-size: 0.85rem;
+  color: var(--text-muted);
+}
+
+.upcoming-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 16px;
+}
+
+@media (max-width: 860px) {
+  .upcoming-grid {
     grid-template-columns: 1fr;
   }
 }
 
-.stat-card {
+.upcoming-card {
   display: flex;
-  flex-direction: column;
-  justify-content: space-between;
-  gap: 22px;
-  padding: 24px 28px;
-  min-height: 165px;
-  border-radius: var(--radius-lg);
-  position: relative;
-  overflow: hidden;
-}
-
-.stat-top {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.stat-icon-wrapper {
-  width: 48px;
-  height: 48px;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 20px;
   border-radius: var(--radius-md);
+  background: #f8fafc;
+  border: 1px solid #edf2f7;
+  transition: all 0.2s ease;
+}
+
+.upcoming-card:hover {
+  background: #ffffff;
+  border-color: #cbd5e1;
+  box-shadow: 0 4px 12px rgba(15, 23, 42, 0.05);
+  transform: translateY(-2px);
+}
+
+.upcoming-card-icon {
+  width: 44px;
+  height: 44px;
+  border-radius: 12px;
   display: flex;
   align-items: center;
   justify-content: center;
+  flex-shrink: 0;
 }
 
-.indigo-glow {
+.icon-indigo {
   background: #eef2ff;
   color: #4f46e5;
 }
 
-.amber-glow {
-  background: #fef3c7;
-  color: #d97706;
-}
-
-.emerald-glow {
+.icon-emerald {
   background: #ecfdf5;
   color: #059669;
 }
 
-.violet-glow {
+.icon-amber {
+  background: #fef3c7;
+  color: #d97706;
+}
+
+.icon-violet {
   background: #f3e8ff;
   color: #7c3aed;
 }
 
-.stat-trend {
-  font-size: 0.75rem;
+.upcoming-card-body h4 {
+  font-size: 0.96rem;
   font-weight: 700;
-  padding: 4px 10px;
-  border-radius: 9999px;
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-}
-
-.trend-positive {
-  background: #eef2ff;
-  color: #4f46e5;
-}
-
-.trend-amber {
-  background: #fef3c7;
-  color: #b45309;
-}
-
-.trend-emerald {
-  background: #ecfdf5;
-  color: #047857;
-}
-
-.trend-violet {
-  background: #f3e8ff;
-  color: #6d28d9;
-}
-
-.stat-body {
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-}
-
-.stat-label {
-  font-size: 0.85rem;
-  font-weight: 600;
-  color: var(--text-muted);
-  letter-spacing: -0.2px;
-}
-
-.stat-value {
-  font-size: 1.85rem;
-  font-weight: 800;
   color: var(--text-main);
-  letter-spacing: -0.8px;
-  display: flex;
-  align-items: baseline;
-  gap: 6px;
-}
-
-.stat-unit {
-  font-size: 1rem;
-  font-weight: 600;
-  color: var(--text-muted);
-}
-
-/* Brands Section */
-.brands-section {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.mb-3 {
   margin-bottom: 4px;
 }
 
-.brands-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
-  gap: 18px;
-}
-
-.brand-stat-card {
-  padding: 20px 24px;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-  border-radius: var(--radius-md);
-  border-top: 4px solid var(--primary);
-  transition: all 0.2s ease;
-}
-
-.brand-stat-card:hover {
-  transform: translateY(-2px);
-}
-
-.brand-stat-header {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-}
-
-.brand-pill-name {
-  font-size: 0.95rem;
-  font-weight: 800;
-  letter-spacing: 1px;
-}
-
-.brand-stat-val {
-  font-size: 1.5rem;
-  font-weight: 800;
-  color: var(--text-main);
-  letter-spacing: -0.5px;
-  display: flex;
-  align-items: baseline;
-  gap: 4px;
-}
-
-.brand-stat-unit {
-  font-size: 0.82rem;
-  font-weight: 600;
-  color: var(--text-muted);
-}
-
-.brand-stat-footer {
-  font-size: 0.72rem;
-  color: var(--text-light);
-  font-weight: 500;
-}
-
-/* Card Themes */
-.brand-card-nike {
-  border-top-color: #0f172a;
-}
-.brand-card-nike .brand-pill-name {
-  color: #0f172a;
-}
-
-.brand-card-fila {
-  border-top-color: #00205b;
-}
-.brand-card-fila .brand-pill-name {
-  color: #00205b;
-}
-
-.brand-card-umbro {
-  border-top-color: #0284c7;
-}
-.brand-card-umbro .brand-pill-name {
-  color: #0284c7;
-}
-
-.brand-card-osklen {
-  border-top-color: #ca8a04;
-}
-.brand-card-osklen .brand-pill-name {
-  color: #854d0e;
-}
-
-/* Seção de Tabela */
-.dashboard-section {
-  display: flex;
-  flex-direction: column;
-  gap: 16px;
-}
-
-.section-header {
-  display: flex;
-  justify-content: space-between;
-  align-items: flex-end;
-}
-
-.section-title-wrap h2,
-.section-title-wrap h3 {
-  font-size: 1.25rem;
-  font-weight: 700;
-  color: var(--text-main);
-  letter-spacing: -0.4px;
-}
-
-.section-subtitle {
+.upcoming-card-body p {
   font-size: 0.85rem;
   color: var(--text-muted);
+  line-height: 1.45;
+  margin: 0;
 }
 
-.btn-text-link {
-  background: transparent;
-  border: none;
-  color: var(--primary);
-  font-weight: 600;
-  font-size: 0.9rem;
-  cursor: pointer;
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  transition: all 0.2s ease;
-}
-
-.btn-text-link:hover {
-  color: var(--primary-hover);
-  transform: translateX(3px);
-}
-
-.table-card {
-  padding: 0;
-  overflow: hidden;
-}
-
-.modern-table {
-  width: 100%;
-  border-collapse: collapse;
-  text-align: left;
-  font-size: 0.9rem;
-}
-
-.modern-table th {
-  background: #f8fafc;
-  padding: 14px 20px;
-  font-weight: 700;
-  color: #475569;
-  font-size: 0.78rem;
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
-  border-bottom: 1px solid var(--border);
-}
-
-.modern-table td {
-  padding: 16px 20px;
-  border-bottom: 1px solid #f1f5f9;
-  color: var(--text-main);
-}
-
-.modern-table tbody tr {
-  transition: background-color 0.15s ease;
-}
-
-.modern-table tbody tr:hover {
-  background-color: #f8fafc;
-}
-
-.cell-date {
+/* Rodapé com Ações */
+.dev-footer-actions {
   display: flex;
   align-items: center;
-  gap: 8px;
-  color: var(--text-muted);
-  font-size: 0.85rem;
+  gap: 14px;
+  flex-wrap: wrap;
+  padding-top: 8px;
 }
 
-.badge-marca {
-  display: inline-block;
-  padding: 3px 9px;
-  border-radius: 6px;
-  font-size: 0.75rem;
-  font-weight: 800;
-  letter-spacing: 0.5px;
-  background: #0f172a;
-  color: #ffffff;
-}
-
-.marca-nike {
-  background: #0f172a;
-  color: #ffffff;
-}
-
-.marca-fila {
-  background: #00205b;
-  color: #ffffff;
-  border-left: 3px solid #ef4444;
-}
-
-.marca-umbro {
-  background: #0284c7;
-  color: #ffffff;
-}
-
-.marca-osklen {
-  background: #27272a;
-  color: #fde047;
-}
-
-.cracha-tag {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  background: #f1f5f9;
-  color: #334155;
-  padding: 4px 8px;
-  border-radius: 6px;
-  font-size: 0.82rem;
-  font-weight: 600;
-}
-
-.unit-label {
-  font-size: 0.75rem;
-  color: var(--text-muted);
-  font-weight: 500;
-  margin-left: 2px;
-}
-
-.font-medium {
-  font-weight: 600;
-}
-
-.font-semibold {
-  font-weight: 600;
-}
-
-.font-bold {
-  font-weight: 700;
-}
-
-.text-muted {
-  color: var(--text-muted);
-}
-
-.text-right {
-  text-align: right;
-}
-
-.empty-state {
-  padding: 40px;
-  text-align: center;
-  color: var(--text-muted);
+@media (max-width: 600px) {
+  .dev-hero-card {
+    padding: 24px;
+  }
+  .dev-footer-actions {
+    flex-direction: column;
+    width: 100%;
+  }
+  .dev-footer-actions button {
+    width: 100%;
+    justify-content: center;
+  }
 }
 </style>

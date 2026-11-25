@@ -1,21 +1,21 @@
 <script setup>
 import { ref, computed, nextTick } from 'vue'
 import { useRouter } from 'vue-router'
-import { 
-  Recycle, 
-  Save, 
-  CheckCircle2, 
-  Building2, 
-  Calendar, 
-  Scale, 
-  IdCard, 
-  List, 
-  FlaskConical, 
-  Tag, 
+import {
+  Recycle,
+  Save,
+  CheckCircle2,
+  Building2,
+  Calendar,
+  Scale,
+  IdCard,
+  List,
+  FlaskConical,
+  Tag,
   DollarSign,
   Lock,
   AlertCircle,
-  X
+  X,
 } from 'lucide-vue-next'
 import { useRegistrosStore } from '../stores/registros'
 
@@ -38,9 +38,9 @@ const isCampoPreenchido = (valor) => {
 }
 
 const abrirLista = (e) => {
-  try {
-    e?.target?.showPicker?.()
-  } catch {}
+  if (e?.target && typeof e.target.showPicker === 'function') {
+    e.target.showPicker()
+  }
 }
 
 const form = ref({
@@ -49,7 +49,7 @@ const form = ref({
   marca: '',
   celula: '',
   produto: '',
-  quantidade: ''
+  quantidade: '',
 })
 
 const sucesso = ref(false)
@@ -73,7 +73,9 @@ const formatarMoeda = (valor) => {
 // Objeto do produto selecionado
 const produtoSelecionado = computed(() => {
   if (!form.value.produto) return null
-  return store.produtos.find(p => p.nome.toLowerCase() === form.value.produto.toLowerCase()) || null
+  return (
+    store.produtos.find((p) => p.nome.toLowerCase() === form.value.produto.toLowerCase()) || null
+  )
 })
 
 // Valor unitário do produto selecionado
@@ -89,10 +91,10 @@ const custoTotalCalculado = computed(() => {
 
 const solicitarCracha = () => {
   if (
-    !form.value.data || 
-    !form.value.marca || 
-    !form.value.celula || 
-    !form.value.produto || 
+    !form.value.data ||
+    !form.value.marca ||
+    !form.value.celula ||
+    !form.value.produto ||
     !form.value.quantidade
   ) {
     return
@@ -128,7 +130,7 @@ const confirmarCrachaESalvar = () => {
     qtd: qtdNum,
     valorUnitario: valorUnitario.value,
     valorTotal: custoTotalCalculado.value,
-    nome: `Crachá ${crachaLimpo}`
+    nome: `Crachá ${crachaLimpo}`,
   })
 
   sucesso.value = true
@@ -142,7 +144,7 @@ const confirmarCrachaESalvar = () => {
     marca: marcaAtual,
     celula: celulaAtual,
     produto: '',
-    quantidade: ''
+    quantidade: '',
   }
 
   fecharModalCracha()
@@ -161,7 +163,9 @@ const confirmarCrachaESalvar = () => {
         <span>Gestão Ambiental • Setor Químico</span>
       </div>
       <h1 class="page-title">Destinação de Resíduos Químicos</h1>
-      <p class="page-subtitle">Controle e registro de descarte de resíduos químicos por marca e célula de produção</p>
+      <p class="page-subtitle">
+        Controle e registro de descarte de resíduos químicos por marca e célula de produção
+      </p>
     </div>
 
     <!-- Mensagem de Sucesso -->
@@ -169,7 +173,9 @@ const confirmarCrachaESalvar = () => {
       <CheckCircle2 :size="20" />
       <div>
         <strong>Resíduo químico registrado com sucesso!</strong>
-        <span> Registro computado para o setor químico com marca, célula e quantidade atualizados.</span>
+        <span>
+          Registro computado para o setor químico com marca, célula e quantidade atualizados.</span
+        >
       </div>
     </div>
 
@@ -205,11 +211,11 @@ const confirmarCrachaESalvar = () => {
         <div class="form-grid">
           <div class="input-group">
             <label><Calendar :size="16" /> Data do Resíduo</label>
-            <input 
-              type="date" 
-              v-model="form.data" 
-              :class="['modern-input', { 'input-filled': isCampoPreenchido(form.data) }]" 
-              required 
+            <input
+              type="date"
+              v-model="form.data"
+              :class="['modern-input', { 'input-filled': isCampoPreenchido(form.data) }]"
+              required
             />
           </div>
 
@@ -228,15 +234,20 @@ const confirmarCrachaESalvar = () => {
           <div class="input-group">
             <div class="label-with-link">
               <label><Tag :size="16" /> Marca</label>
-              <router-link v-if="store.isAdmin" to="/cadastros?tipo=marcas" class="link-manage" title="Cadastrar nova marca">
+              <router-link
+                v-if="store.isAdmin"
+                to="/cadastros?tipo=marcas"
+                class="link-manage"
+                title="Cadastrar nova marca"
+              >
                 + Gerenciar
               </router-link>
             </div>
-            <input 
+            <input
               type="text"
               list="lista-marcas-residuo"
-              v-model="form.marca" 
-              :class="['modern-input', { 'input-filled': isCampoPreenchido(form.marca) }]" 
+              v-model="form.marca"
+              :class="['modern-input', { 'input-filled': isCampoPreenchido(form.marca) }]"
               placeholder="Selecione ou digite a marca..."
               @click="abrirLista($event)"
               required
@@ -250,7 +261,12 @@ const confirmarCrachaESalvar = () => {
           <div class="input-group">
             <div class="label-with-link">
               <label><Building2 :size="16" /> Célula</label>
-              <router-link v-if="store.isAdmin" to="/cadastros?tipo=celulas" class="link-manage" title="Cadastrar nova célula">
+              <router-link
+                v-if="store.isAdmin"
+                to="/cadastros?tipo=celulas"
+                class="link-manage"
+                title="Cadastrar nova célula"
+              >
                 + Gerenciar
               </router-link>
             </div>
@@ -274,15 +290,20 @@ const confirmarCrachaESalvar = () => {
           <div class="input-group">
             <div class="label-with-link">
               <label><FlaskConical :size="16" /> Produto</label>
-              <router-link v-if="store.isAdmin" to="/cadastros?tipo=produtos" class="link-manage" title="Cadastrar novo produto">
+              <router-link
+                v-if="store.isAdmin"
+                to="/cadastros?tipo=produtos"
+                class="link-manage"
+                title="Cadastrar novo produto"
+              >
                 + Gerenciar
               </router-link>
             </div>
-            <input 
+            <input
               type="text"
               list="lista-produtos-residuo"
-              v-model="form.produto" 
-              :class="['modern-input', { 'input-filled': isCampoPreenchido(form.produto) }]" 
+              v-model="form.produto"
+              :class="['modern-input', { 'input-filled': isCampoPreenchido(form.produto) }]"
               placeholder="Selecione ou digite o produto..."
               @click="abrirLista($event)"
               required
@@ -304,7 +325,9 @@ const confirmarCrachaESalvar = () => {
                 min="0.001"
                 required
               />
-              <span class="suffix" :class="{ 'suffix-filled': isCampoPreenchido(form.quantidade) }">Kg / L</span>
+              <span class="suffix" :class="{ 'suffix-filled': isCampoPreenchido(form.quantidade) }"
+                >Kg / L</span
+              >
             </div>
             <span class="field-hint">Informe a quantidade descartada (em Kg ou Litros)</span>
           </div>
@@ -325,8 +348,8 @@ const confirmarCrachaESalvar = () => {
     <!-- Modal Flutuante de Confirmação do Crachá do Operador -->
     <Teleport to="body">
       <Transition name="fade">
-        <div 
-          v-if="modalCrachaAberto" 
+        <div
+          v-if="modalCrachaAberto"
           class="floating-modal-backdrop cracha-modal-backdrop"
           @click.self="fecharModalCracha"
           aria-modal="true"
@@ -341,7 +364,12 @@ const confirmarCrachaESalvar = () => {
                 <h3>Identificação do Operador</h3>
                 <p>Aproxime ou digite o crachá para confirmar e salvar o resíduo</p>
               </div>
-              <button type="button" @click="fecharModalCracha" class="btn-close-modal" title="Cancelar">
+              <button
+                type="button"
+                @click="fecharModalCracha"
+                class="btn-close-modal"
+                title="Cancelar"
+              >
                 <X :size="20" />
               </button>
             </div>
@@ -380,7 +408,9 @@ const confirmarCrachaESalvar = () => {
                   required
                   autofocus
                 />
-                <span class="field-hint-cracha">Pressione <strong>Enter</strong> ou clique em Confirmar para salvar</span>
+                <span class="field-hint-cracha"
+                  >Pressione <strong>Enter</strong> ou clique em Confirmar para salvar</span
+                >
               </div>
 
               <div v-if="erroCracha" class="alert-danger alert-cracha">

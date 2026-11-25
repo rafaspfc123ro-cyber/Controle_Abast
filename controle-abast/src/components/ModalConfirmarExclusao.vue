@@ -1,10 +1,5 @@
 <script setup>
-import { 
-  Trash2, 
-  X, 
-  CheckCircle2, 
-  AlertCircle 
-} from 'lucide-vue-next'
+import { Trash2, X, CheckCircle2, AlertCircle } from 'lucide-vue-next'
 import { useRegistrosStore } from '../stores/registros'
 
 const store = useRegistrosStore()
@@ -33,23 +28,10 @@ if (typeof window !== 'undefined') {
   <Teleport to="body">
     <!-- 1. MODAL CENTRAL DE CONFIRMAÇÃO DIRETA (SEM SENHA) -->
     <Transition name="fade-modal">
-      <div 
-        v-if="store.modalExclusao.aberto" 
-        class="central-modal-backdrop"
-        @click.self="cancelar"
-      >
-        <div 
-          class="central-modal-box"
-          role="dialog"
-          aria-modal="true"
-        >
+      <div v-if="store.modalExclusao.aberto" class="central-modal-backdrop" @click.self="cancelar">
+        <div class="central-modal-box" role="dialog" aria-modal="true">
           <!-- Botão Fechar no Canto -->
-          <button 
-            type="button" 
-            @click="cancelar" 
-            class="modal-close-btn"
-            title="Fechar"
-          >
+          <button type="button" @click="cancelar" class="modal-close-btn" title="Fechar">
             <X :size="18" />
           </button>
 
@@ -79,20 +61,9 @@ if (typeof window !== 'undefined') {
 
           <!-- Botões de Ação Diretos (Sem Senha) -->
           <div class="modal-actions-row">
-            <button 
-              type="button" 
-              @click="cancelar" 
-              class="btn-modal-cancel"
-            >
-              Cancelar
-            </button>
+            <button type="button" @click="cancelar" class="btn-modal-cancel">Cancelar</button>
 
-            <button 
-              type="button" 
-              @click="confirmar"
-              class="btn-modal-delete"
-              autofocus
-            >
+            <button type="button" @click="confirmar" class="btn-modal-delete" autofocus>
               <Trash2 :size="16" />
               <span>Confirmar Exclusão</span>
             </button>
@@ -103,12 +74,12 @@ if (typeof window !== 'undefined') {
 
     <!-- 2. NOTIFICAÇÃO NO MEIO DA TELA (FEEDBACK CENTRAL) -->
     <Transition name="bounce-notification">
-      <div 
-        v-if="store.notificacaoCentro.aberto" 
+      <div
+        v-if="store.notificacaoCentro.aberto"
         class="center-notification-backdrop"
         @click="store.fecharNotificacaoCentro"
       >
-        <div 
+        <div
           class="center-notification-card"
           :class="`notif-${store.notificacaoCentro.tipo}`"
           @click.stop
@@ -121,11 +92,7 @@ if (typeof window !== 'undefined') {
           <h3 class="notif-title">{{ store.notificacaoCentro.titulo }}</h3>
           <p class="notif-message">{{ store.notificacaoCentro.mensagem }}</p>
 
-          <button 
-            type="button" 
-            @click="store.fecharNotificacaoCentro" 
-            class="notif-btn-dismiss"
-          >
+          <button type="button" @click="store.fecharNotificacaoCentro" class="notif-btn-dismiss">
             OK
           </button>
         </div>
@@ -156,7 +123,9 @@ if (typeof window !== 'undefined') {
   border-radius: 20px;
   max-width: 460px;
   width: 100%;
-  box-shadow: 0 25px 50px -12px rgba(15, 23, 42, 0.35), 0 0 0 1px rgba(226, 232, 240, 0.9);
+  box-shadow:
+    0 25px 50px -12px rgba(15, 23, 42, 0.35),
+    0 0 0 1px rgba(226, 232, 240, 0.9);
   padding: 30px 28px 26px 28px;
   position: relative;
   display: flex;
@@ -388,7 +357,9 @@ if (typeof window !== 'undefined') {
   font-size: 0.85rem;
   font-weight: 600;
   border: 1px solid rgba(255, 255, 255, 0.2);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.25), 0 4px 12px rgba(220, 38, 38, 0.3);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.25),
+    0 4px 12px rgba(220, 38, 38, 0.3);
   cursor: pointer;
   display: inline-flex;
   align-items: center;
@@ -399,7 +370,9 @@ if (typeof window !== 'undefined') {
 
 .btn-modal-delete:hover {
   transform: translateY(-1px);
-  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.35), 0 6px 16px rgba(220, 38, 38, 0.4);
+  box-shadow:
+    inset 0 1px 0 rgba(255, 255, 255, 0.35),
+    0 6px 16px rgba(220, 38, 38, 0.4);
   filter: brightness(1.03);
 }
 
@@ -413,10 +386,23 @@ if (typeof window !== 'undefined') {
 }
 
 @keyframes shake {
-  10%, 90% { transform: translate3d(-2px, 0, 0); }
-  20%, 80% { transform: translate3d(3px, 0, 0); }
-  30%, 50%, 70% { transform: translate3d(-4px, 0, 0); }
-  40%, 60% { transform: translate3d(4px, 0, 0); }
+  10%,
+  90% {
+    transform: translate3d(-2px, 0, 0);
+  }
+  20%,
+  80% {
+    transform: translate3d(3px, 0, 0);
+  }
+  30%,
+  50%,
+  70% {
+    transform: translate3d(-4px, 0, 0);
+  }
+  40%,
+  60% {
+    transform: translate3d(4px, 0, 0);
+  }
 }
 
 @keyframes scale-up {
@@ -452,7 +438,9 @@ if (typeof window !== 'undefined') {
   padding: 30px 32px 24px 32px;
   max-width: 380px;
   width: 100%;
-  box-shadow: 0 25px 50px -10px rgba(15, 23, 42, 0.35), 0 0 0 1px rgba(226, 232, 240, 0.9);
+  box-shadow:
+    0 25px 50px -10px rgba(15, 23, 42, 0.35),
+    0 0 0 1px rgba(226, 232, 240, 0.9);
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -546,7 +534,9 @@ if (typeof window !== 'undefined') {
 
 .fade-error-enter-active,
 .fade-error-leave-active {
-  transition: opacity 0.2s ease, transform 0.2s ease;
+  transition:
+    opacity 0.2s ease,
+    transform 0.2s ease;
 }
 .fade-error-enter-from,
 .fade-error-leave-to {

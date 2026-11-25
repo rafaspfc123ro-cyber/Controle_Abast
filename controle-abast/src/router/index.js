@@ -4,7 +4,7 @@ import AbastecimentoForm from '../views/AbastecimentoForm.vue'
 import ResiduoForm from '../views/ResiduoForm.vue'
 import Registros from '../views/Registros.vue'
 import Cadastros from '../views/Cadastros.vue'
-import DashboardDev from '../views/DashboardDev.vue'
+import Dashboard from '../views/Dashboard.vue'
 import Usuarios from '../views/Usuarios.vue'
 
 const router = createRouter({
@@ -14,10 +14,31 @@ const router = createRouter({
     { path: '/abastecimento', name: 'abastecimento', component: AbastecimentoForm },
     { path: '/residuo', name: 'residuo', component: ResiduoForm },
     { path: '/registros', name: 'registros', component: Registros },
-    { path: '/cadastros', name: 'cadastros', component: Cadastros },
-    { path: '/dashboard', name: 'dashboard', component: DashboardDev },
-    { path: '/usuarios', name: 'usuarios', component: Usuarios }
-  ]
+    {
+      path: '/cadastros',
+      name: 'cadastros',
+      component: Cadastros,
+      meta: { requiresAdmin: true },
+    },
+    { path: '/dashboard', name: 'dashboard', component: Dashboard },
+    {
+      path: '/usuarios',
+      name: 'usuarios',
+      component: Usuarios,
+      meta: { requiresAdmin: true },
+    },
+  ],
+})
+
+// Guarda de navegação para rotas restritas aos administradores
+router.beforeEach((to, _from, next) => {
+  if (to.meta.requiresAdmin) {
+    const adminAtivo = localStorage.getItem('controlabast_admin_ativo')
+    if (!adminAtivo) {
+      return next({ path: '/', query: { loginRequired: 'true' } })
+    }
+  }
+  next()
 })
 
 export default router

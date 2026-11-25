@@ -1,22 +1,21 @@
 <script setup>
 import { ref, computed } from 'vue'
-import { 
-  RotateCcw, 
-  Trash2, 
+import {
+  RotateCcw,
+  Trash2,
   Pencil,
-  Calendar, 
-  Download, 
-  FlaskConical, 
-  Recycle, 
-  Filter, 
-  IdCard, 
+  Calendar,
+  Download,
+  FlaskConical,
+  Recycle,
+  Filter,
+  IdCard,
   Building2,
   X,
   Save,
-  CheckCircle2,
   AlertCircle,
   Tag,
-  Scale
+  Scale,
 } from 'lucide-vue-next'
 import { useRegistrosStore } from '../stores/registros'
 
@@ -36,7 +35,7 @@ const formEdicao = ref({
   celula: '',
   produto: '',
   qtd: 0,
-  cracha: ''
+  cracha: '',
 })
 const erroEdicao = ref('')
 
@@ -58,7 +57,7 @@ const abrirModalEdicao = (item) => {
     celula: item.celula || store.celulas[0] || '',
     produto: item.produto || store.produtos[0]?.nome || '',
     qtd: item.qtd || 0,
-    cracha: item.cracha || (item.nome && item.nome.replace('Crachá', '').trim()) || ''
+    cracha: item.cracha || (item.nome && item.nome.replace('Crachá', '').trim()) || '',
   }
   erroEdicao.value = ''
   modalEdicaoAberto.value = true
@@ -71,18 +70,18 @@ const fecharModalEdicao = () => {
 }
 
 const abrirLista = (e) => {
-  try {
-    e?.target?.showPicker?.()
-  } catch {}
+  if (e?.target && typeof e.target.showPicker === 'function') {
+    e.target.showPicker()
+  }
 }
 
 const salvarEdicao = () => {
   if (
-    !formEdicao.value.data || 
-    !formEdicao.value.marca || 
-    !formEdicao.value.celula || 
-    !formEdicao.value.produto || 
-    !formEdicao.value.qtd || 
+    !formEdicao.value.data ||
+    !formEdicao.value.marca ||
+    !formEdicao.value.celula ||
+    !formEdicao.value.produto ||
+    !formEdicao.value.qtd ||
     !formEdicao.value.cracha
   ) {
     erroEdicao.value = 'Por favor, preencha todos os campos para salvar a alteração.'
@@ -94,7 +93,9 @@ const salvarEdicao = () => {
   const dataHoraFinal = `${dataFormatada} ${formEdicao.value.hora}`
 
   // Localiza preço unitário do produto para recalcular o custo se for abastecimento
-  const prodObj = store.produtos.find(p => p.nome.toLowerCase() === formEdicao.value.produto.toLowerCase())
+  const prodObj = store.produtos.find(
+    (p) => p.nome.toLowerCase() === formEdicao.value.produto.toLowerCase(),
+  )
   const vlrUnit = prodObj ? Number(prodObj.valor) : 0
   const qtdNum = Number(formEdicao.value.qtd)
   const vlrTot = formEdicao.value.tipo === 'Abastecimento' ? qtdNum * vlrUnit : 0
@@ -109,7 +110,7 @@ const salvarEdicao = () => {
     valorUnitario: vlrUnit,
     valorTotal: vlrTot,
     cracha: formEdicao.value.cracha.trim(),
-    nome: `Crachá ${formEdicao.value.cracha.trim()}`
+    nome: `Crachá ${formEdicao.value.cracha.trim()}`,
   })
 
   if (res.ok) {
@@ -117,7 +118,7 @@ const salvarEdicao = () => {
     store.mostrarNotificacaoCentro({
       tipo: 'sucesso',
       titulo: 'Registro Atualizado!',
-      mensagem: 'As alterações do lançamento foram salvas com sucesso.'
+      mensagem: 'As alterações do lançamento foram salvas com sucesso.',
     })
   } else {
     erroEdicao.value = res.msg || 'Erro ao atualizar registro.'
@@ -133,7 +134,7 @@ const filtros = ref({
   dataFim: '',
   cracha: '',
   produto: '',
-  celula: ''
+  celula: '',
 })
 
 const resetarFiltros = () => {
@@ -144,7 +145,7 @@ const resetarFiltros = () => {
     dataFim: '',
     cracha: '',
     produto: '',
-    celula: ''
+    celula: '',
   }
 }
 
@@ -169,22 +170,34 @@ const registrosFiltrados = computed(() => {
 
     // Crachá
     const crachaStr = String(reg.cracha || reg.nome || '').toLowerCase()
-    const bateCracha = !filtros.value.cracha || crachaStr.includes(filtros.value.cracha.toLowerCase())
+    const bateCracha =
+      !filtros.value.cracha || crachaStr.includes(filtros.value.cracha.toLowerCase())
 
     // Produto
-    const bateProduto = !filtros.value.produto || 
+    const bateProduto =
+      !filtros.value.produto ||
       (reg.produto && reg.produto.toLowerCase().includes(filtros.value.produto.toLowerCase()))
 
     // Célula
-    const bateCelula = !filtros.value.celula || 
+    const bateCelula =
+      !filtros.value.celula ||
       (reg.celula && reg.celula.toLowerCase().includes(filtros.value.celula.toLowerCase()))
 
     // Data Início e Fim
     const dataIso = extrairIsoData(reg.dataHora)
-    const bateDataInicio = !filtros.value.dataInicio || (dataIso && dataIso >= filtros.value.dataInicio)
+    const bateDataInicio =
+      !filtros.value.dataInicio || (dataIso && dataIso >= filtros.value.dataInicio)
     const bateDataFim = !filtros.value.dataFim || (dataIso && dataIso <= filtros.value.dataFim)
 
-    return bateTipo && bateMarca && bateCracha && bateProduto && bateCelula && bateDataInicio && bateDataFim
+    return (
+      bateTipo &&
+      bateMarca &&
+      bateCracha &&
+      bateProduto &&
+      bateCelula &&
+      bateDataInicio &&
+      bateDataFim
+    )
   })
 })
 
@@ -200,27 +213,28 @@ const totais = computed(() => {
   return {
     contagem: registrosFiltrados.value.length,
     quantidade: qtd.toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 3 }),
-    custoTotal: formatarMoeda(custo)
+    custoTotal: formatarMoeda(custo),
   }
 })
 
 const removerRegistro = (id) => {
-  const item = store.registros.find(r => r.id === id)
-  const itemDesc = item 
-    ? `${item.tipo}: ${item.produto} • ${Number(item.qtd).toLocaleString('pt-BR')} Kg/L (${item.marca || item.celula})` 
+  const item = store.registros.find((r) => r.id === id)
+  const itemDesc = item
+    ? `${item.tipo}: ${item.produto} • ${Number(item.qtd).toLocaleString('pt-BR')} Kg/L (${item.marca || item.celula})`
     : `Lançamento #${id}`
 
   store.abrirConfirmacaoExclusao({
     titulo: 'Excluir Lançamento',
-    descricao: 'Tem certeza que deseja excluir este lançamento? Esta ação removerá o registro e atualizará todos os relatórios.',
+    descricao:
+      'Tem certeza que deseja excluir este lançamento? Esta ação removerá o registro e atualizará todos os relatórios.',
     itemNome: itemDesc,
     onConfirm: () => {
       store.removerRegistro(id)
       return {
         titulo: 'Lançamento Removido!',
-        msg: 'O registro foi excluído e os totais foram recalculados com sucesso.'
+        msg: 'O registro foi excluído e os totais foram recalculados com sucesso.',
       }
-    }
+    },
   })
 }
 
@@ -231,8 +245,19 @@ const exportarCSV = () => {
     return
   }
 
-  const cabecalho = ['ID', 'Tipo', 'Data e Hora', 'Marca', 'Célula', 'Produto Químico', 'Crachá', 'Quantidade (Kg/L)', 'Valor Total (R$)']
-  const linhas = registrosFiltrados.value.map(r => [
+  const cabecalho = [
+    'ID',
+    'Tipo',
+    'Data e Hora',
+    'Marca',
+    'Célula',
+    'Produto Químico',
+    'Crachá',
+    'Quantidade (Kg/L)',
+    'Valor Unitário (R$)',
+    'Valor Total (R$)',
+  ]
+  const linhas = registrosFiltrados.value.map((r) => [
     r.id,
     `"${r.tipo}"`,
     `"${r.dataHora}"`,
@@ -240,19 +265,31 @@ const exportarCSV = () => {
     `"${r.celula}"`,
     `"${r.produto}"`,
     `"${r.cracha || r.nome || '—'}"`,
-    r.qtd,
-    (r.valorTotal || 0).toFixed(2)
+    `"${Number(r.qtd || 0)
+      .toFixed(3)
+      .replace('.', ',')}"`,
+    `"${Number(r.valorUnitario || 0)
+      .toFixed(2)
+      .replace('.', ',')}"`,
+    `"${Number(r.valorTotal || 0)
+      .toFixed(2)
+      .replace('.', ',')}"`,
   ])
 
-  const csvContent = '\uFEFF' + [cabecalho.join(';'), ...linhas.map(e => e.join(';'))].join('\n')
+  const csvContent =
+    '\uFEFF' + [cabecalho.join(';'), ...linhas.map((e) => e.join(';'))].join('\r\n')
   const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' })
   const url = URL.createObjectURL(blob)
   const link = document.createElement('a')
   link.setAttribute('href', url)
-  link.setAttribute('download', `abastecimentos_quimico_${new Date().toISOString().split('T')[0]}.csv`)
+  link.setAttribute(
+    'download',
+    `abastecimentos_quimico_${new Date().toISOString().split('T')[0]}.csv`,
+  )
   document.body.appendChild(link)
   link.click()
   document.body.removeChild(link)
+  URL.revokeObjectURL(url)
 }
 </script>
 
@@ -262,11 +299,17 @@ const exportarCSV = () => {
     <div class="page-header header-flex">
       <div>
         <h1 class="page-title">Registros</h1>
-        <p class="page-subtitle">Consulte e filtre todos os lançamentos do setor químico por marca, célula e crachá</p>
+        <p class="page-subtitle">
+          Consulte e filtre todos os lançamentos do setor químico por marca, célula e crachá
+        </p>
       </div>
 
       <div class="header-buttons">
-        <button @click="exportarCSV" class="btn-secondary" title="Exportar tabela atual para CSV / Excel">
+        <button
+          @click="exportarCSV"
+          class="btn-secondary"
+          title="Exportar tabela atual para CSV / Excel"
+        >
           <Download :size="17" /> Exportar CSV
         </button>
       </div>
@@ -278,26 +321,26 @@ const exportarCSV = () => {
         <div class="filter-group-top">
           <!-- Tipo -->
           <div class="type-pills">
-            <button 
-              type="button" 
-              class="pill-btn" 
-              :class="{ active: filtros.tipo === 'TODOS' }" 
+            <button
+              type="button"
+              class="pill-btn"
+              :class="{ active: filtros.tipo === 'TODOS' }"
               @click="filtros.tipo = 'TODOS'"
             >
               Todos
             </button>
-            <button 
-              type="button" 
-              class="pill-btn" 
-              :class="{ active: filtros.tipo === 'Abastecimento' }" 
+            <button
+              type="button"
+              class="pill-btn"
+              :class="{ active: filtros.tipo === 'Abastecimento' }"
               @click="filtros.tipo = 'Abastecimento'"
             >
               <FlaskConical :size="14" /> Abastecimentos
             </button>
-            <button 
-              type="button" 
-              class="pill-btn" 
-              :class="{ active: filtros.tipo === 'Resíduo' }" 
+            <button
+              type="button"
+              class="pill-btn"
+              :class="{ active: filtros.tipo === 'Resíduo' }"
               @click="filtros.tipo = 'Resíduo'"
             >
               <Recycle :size="14" /> Resíduos
@@ -330,10 +373,10 @@ const exportarCSV = () => {
           <label class="filter-field-label">Crachá</label>
           <div class="search-input-wrap">
             <IdCard :size="16" class="search-icon" />
-            <input 
-              type="text" 
-              v-model="filtros.cracha" 
-              placeholder="Buscar crachá..." 
+            <input
+              type="text"
+              v-model="filtros.cracha"
+              placeholder="Buscar crachá..."
               class="modern-input filter-input"
             />
           </div>
@@ -343,10 +386,10 @@ const exportarCSV = () => {
           <label class="filter-field-label">Produto Químico</label>
           <div class="search-input-wrap">
             <FlaskConical :size="16" class="search-icon" />
-            <input 
-              type="text" 
-              v-model="filtros.produto" 
-              placeholder="Buscar produto..." 
+            <input
+              type="text"
+              v-model="filtros.produto"
+              placeholder="Buscar produto..."
               class="modern-input filter-input"
             />
           </div>
@@ -356,10 +399,10 @@ const exportarCSV = () => {
           <label class="filter-field-label">Célula</label>
           <div class="search-input-wrap">
             <Building2 :size="16" class="search-icon" />
-            <input 
-              type="text" 
-              v-model="filtros.celula" 
-              placeholder="Buscar célula..." 
+            <input
+              type="text"
+              v-model="filtros.celula"
+              placeholder="Buscar célula..."
               class="modern-input filter-input"
             />
           </div>
@@ -368,17 +411,17 @@ const exportarCSV = () => {
         <div class="filter-item">
           <label class="filter-field-label">Período de Data</label>
           <div class="date-filter-wrap">
-            <input 
-              type="date" 
-              v-model="filtros.dataInicio" 
-              class="modern-input date-input" 
+            <input
+              type="date"
+              v-model="filtros.dataInicio"
+              class="modern-input date-input"
               title="Data Inicial"
             />
             <span class="date-sep">até</span>
-            <input 
-              type="date" 
-              v-model="filtros.dataFim" 
-              class="modern-input date-input" 
+            <input
+              type="date"
+              v-model="filtros.dataFim"
+              class="modern-input date-input"
               title="Data Final"
             />
           </div>
@@ -412,9 +455,7 @@ const exportarCSV = () => {
         <Filter :size="40" class="empty-icon" />
         <h3>Nenhum registro encontrado</h3>
         <p>Tente alterar ou limpar os filtros de busca acima.</p>
-        <button @click="resetarFiltros" class="btn-secondary mt-3">
-          Limpar Filtros
-        </button>
+        <button @click="resetarFiltros" class="btn-secondary mt-3">Limpar Filtros</button>
       </div>
 
       <div v-else class="table-responsive">
@@ -435,7 +476,12 @@ const exportarCSV = () => {
           <tbody>
             <tr v-for="item in registrosFiltrados" :key="item.id">
               <td>
-                <span :class="['badge', item.tipo === 'Abastecimento' ? 'badge-abastecimento' : 'badge-residuo']">
+                <span
+                  :class="[
+                    'badge',
+                    item.tipo === 'Abastecimento' ? 'badge-abastecimento' : 'badge-residuo',
+                  ]"
+                >
                   {{ item.tipo }}
                 </span>
               </td>
@@ -444,8 +490,8 @@ const exportarCSV = () => {
                 {{ item.dataHora }}
               </td>
               <td>
-                <span 
-                  v-if="item.marca" 
+                <span
+                  v-if="item.marca"
                   class="badge-marca"
                   :class="`marca-${item.marca.toLowerCase()}`"
                 >
@@ -462,24 +508,32 @@ const exportarCSV = () => {
                 </span>
               </td>
               <td class="text-right font-semibold">
-                {{ Number(item.qtd).toLocaleString('pt-BR', { minimumFractionDigits: 1, maximumFractionDigits: 3 }) }}
+                {{
+                  Number(item.qtd).toLocaleString('pt-BR', {
+                    minimumFractionDigits: 1,
+                    maximumFractionDigits: 3,
+                  })
+                }}
                 <span class="unit-label">Kg/L</span>
               </td>
-              <td class="text-right font-bold" :class="item.valorTotal > 0 ? 'text-primary' : 'text-muted'">
+              <td
+                class="text-right font-bold"
+                :class="item.valorTotal > 0 ? 'text-primary' : 'text-muted'"
+              >
                 {{ item.valorTotal > 0 ? formatarMoeda(item.valorTotal) : '—' }}
               </td>
               <td v-if="store.isAdmin" class="text-center">
                 <div class="actions-buttons">
-                  <button 
-                    @click="abrirModalEdicao(item)" 
-                    class="btn-icon-edit" 
+                  <button
+                    @click="abrirModalEdicao(item)"
+                    class="btn-icon-edit"
                     title="Editar este lançamento"
                   >
                     <Pencil :size="16" />
                   </button>
-                  <button 
-                    @click="removerRegistro(item.id)" 
-                    class="btn-icon-danger" 
+                  <button
+                    @click="removerRegistro(item.id)"
+                    class="btn-icon-danger"
                     title="Excluir este lançamento"
                   >
                     <Trash2 :size="16" />
@@ -495,19 +549,22 @@ const exportarCSV = () => {
     <!-- Modal de Edição de Lançamento (Apenas Admin) -->
     <Teleport to="body">
       <Transition name="fade">
-        <div 
-          v-if="modalEdicaoAberto" 
-          class="edit-modal-backdrop"
-          @click.self="fecharModalEdicao"
-        >
+        <div v-if="modalEdicaoAberto" class="edit-modal-backdrop" @click.self="fecharModalEdicao">
           <div class="edit-modal-card">
             <div class="edit-modal-header">
-              <div class="edit-modal-icon" :class="formEdicao.tipo === 'Abastecimento' ? 'icon-circle-abast' : 'icon-circle-residuo'">
+              <div
+                class="edit-modal-icon"
+                :class="
+                  formEdicao.tipo === 'Abastecimento' ? 'icon-circle-abast' : 'icon-circle-residuo'
+                "
+              >
                 <Pencil :size="22" />
               </div>
               <div class="edit-modal-titles">
                 <h3>Editar Lançamento #{{ formEdicao.id }}</h3>
-                <p>Alteração autorizada pelo Administrador ({{ store.usuarioAdminLogado?.nome }})</p>
+                <p>
+                  Alteração autorizada pelo Administrador ({{ store.usuarioAdminLogado?.nome }})
+                </p>
               </div>
               <button type="button" @click="fecharModalEdicao" class="btn-close-modal">
                 <X :size="20" />
@@ -574,13 +631,22 @@ const exportarCSV = () => {
                     required
                   />
                   <datalist id="lista-produtos-edicao">
-                    <option v-for="p in store.produtos" :key="p.id" :value="p.nome">{{ p.nome }}</option>
+                    <option v-for="p in store.produtos" :key="p.id" :value="p.nome">
+                      {{ p.nome }}
+                    </option>
                   </datalist>
                 </div>
 
                 <div class="input-group">
                   <label><Scale :size="15" /> Quantidade (Kg / L)</label>
-                  <input type="number" step="0.001" min="0.001" v-model="formEdicao.qtd" class="modern-input" required />
+                  <input
+                    type="number"
+                    step="0.001"
+                    min="0.001"
+                    v-model="formEdicao.qtd"
+                    class="modern-input"
+                    required
+                  />
                 </div>
               </div>
 
