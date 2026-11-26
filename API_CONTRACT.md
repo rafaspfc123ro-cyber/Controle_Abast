@@ -4,9 +4,9 @@ Este documento descreve todas as rotas, métodos HTTP, headers e payloads JSON c
 
 ## Configuração Base
 
-- **Variável de ambiente:** `VITE_API_URL` (definida em `.env` e `.env.example`)
+- **Variável de ambiente:** `VITE_API_URL` (definida em `frontend/.env` e `frontend/.env.example`)
 - **Valor padrão local:** `http://localhost:3000/api`
-- **Cliente HTTP:** `src/services/api.js` (wrapper baseado em `fetch` nativo)
+- **Cliente HTTP:** `frontend/src/services/api.js` (wrapper baseado em `fetch` nativo)
 
 ### Headers Padrão
 
