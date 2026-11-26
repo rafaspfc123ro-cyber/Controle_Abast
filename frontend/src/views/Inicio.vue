@@ -877,7 +877,7 @@ const formatarMoeda = (valor) => {
               <div class="cracha-modal-titles">
                 <h3>Identificação do Operador</h3>
                 <p>
-                  Aproxime ou digite o crachá para confirmar e salvar o
+                  Aproxime o crachá/RFID ou digite a matrícula para confirmar e salvar o
                   {{ operacaoPendente === 'abastecimento' ? 'abastecimento' : 'resíduo' }}
                 </p>
               </div>
@@ -940,14 +940,16 @@ const formatarMoeda = (valor) => {
             <!-- Formulário de Leitura / Digitação do Crachá -->
             <form @submit.prevent="confirmarCrachaESalvar" class="cracha-form">
               <div class="input-group">
-                <label class="label-cracha"><IdCard :size="16" /> Crachá do Operador *</label>
+                <label class="label-cracha"
+                  ><IdCard :size="16" /> Matrícula / Crachá / RFID *</label
+                >
                 <input
                   ref="inputCrachaRef"
                   type="text"
                   v-model="crachaTemp"
                   class="modern-input input-cracha-destaque"
                   :class="{ 'input-filled': isCampoPreenchido(crachaTemp) }"
-                  placeholder="Digite ou aproxime o crachá..."
+                  placeholder="Digite a matrícula ou aproxime crachá/RFID..."
                   required
                   autofocus
                 />
@@ -1162,7 +1164,7 @@ const formatarMoeda = (valor) => {
               <th>Marca</th>
               <th>Célula</th>
               <th>Produto Químico</th>
-              <th>Crachá</th>
+              <th>Colaborador</th>
               <th class="text-right">Quantidade</th>
               <th class="text-right">Valor Estimado</th>
             </tr>
@@ -1196,9 +1198,9 @@ const formatarMoeda = (valor) => {
               <td class="font-medium">{{ item.celula }}</td>
               <td>{{ item.produto }}</td>
               <td>
-                <span class="cracha-tag">
+                <span class="cracha-tag" :title="`Matrícula/Crachá: ${item.matricula || item.cracha || '—'}`">
                   <IdCard :size="13" />
-                  {{ item.cracha || item.nome || '—' }}
+                  {{ item.nome || item.cracha || '—' }}
                 </span>
               </td>
               <td class="text-right font-semibold">

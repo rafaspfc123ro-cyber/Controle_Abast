@@ -105,16 +105,16 @@ onUnmounted(() => {
             <Lock :size="28" />
           </div>
 
-          <h2 id="modal-login-title" class="modal-title">Login</h2>
+          <h2 id="modal-login-title" class="modal-title">Login DASS</h2>
           <p class="modal-desc">
-            Entre com suas credenciais para acessar os cadastros e gerenciar lançamentos.
+            Entre com seu usuário e senha do DASS Auth para acessar cadastros e gerenciar lançamentos.
           </p>
 
           <form @submit.prevent="submeterLogin" class="auth-form-section">
             <div class="auth-field-group">
               <label class="auth-label" for="login-cracha">
                 <IdCard :size="14" />
-                <span>Crachá / Usuário</span>
+                <span>Usuário DASS</span>
               </label>
               <input
                 id="login-cracha"
@@ -122,7 +122,7 @@ onUnmounted(() => {
                 v-model="cracha"
                 type="text"
                 class="auth-field"
-                placeholder="Digite seu crachá..."
+                placeholder="Digite seu usuário DASS..."
                 autocomplete="username"
                 :disabled="authStore.loading"
                 required

@@ -29,11 +29,19 @@ export const useAuthStore = defineStore('auth', () => {
   const error = ref(null)
   const modalLoginAberto = ref(false)
 
-  const isAuthenticated = computed(() => Boolean(token.value && usuario.value))
+  const isAuthenticated = computed(() => Boolean(usuario.value))
   const isAdmin = computed(() => {
     if (!isAuthenticated.value) return false
+    if (
+      usuario.value?.isAdmin ||
+      usuario.value?.isGlobalAdmin ||
+      usuario.value?.isLocalAdmin ||
+      usuario.value?.isMaster
+    ) {
+      return true
+    }
     const perfil = String(usuario.value?.perfil || usuario.value?.role || '').toLowerCase()
-    return perfil !== 'operador'
+    return perfil === 'master' || perfil === 'admin'
   })
 
   const limparEstadoSessao = () => {
@@ -63,7 +71,7 @@ export const useAuthStore = defineStore('auth', () => {
 
     try {
       const payload = {
-        cracha: (credenciais?.cracha || '').trim(),
+        usuario: (credenciais?.usuario || credenciais?.cracha || '').trim(),
         senha: credenciais?.senha || '',
       }
 
@@ -93,7 +101,30 @@ export const useAuthStore = defineStore('auth', () => {
     }
   }
 
-  const logout = () => {
+  const verificarSessao = async () => {
+    if (!token.value && !usuario.value) return { ok: false }
+    try {
+      const data = await api.get('/auth/me')
+      if (data?.usuario) {
+        usuario.value = data.usuario
+        if (typeof window !== 'undefined') {
+          localStorage.setItem(USER_STORAGE_KEY, JSON.stringify(data.usuario))
+        }
+        return { ok: true, usuario: data.usuario }
+      }
+      return { ok: false }
+    } catch {
+      limparEstadoSessao()
+      return { ok: false }
+    }
+  }
+
+  const logout = async () => {
+    try {
+      await api.post('/auth/logout', {})
+    } catch {
+      // Ignora erro de rede ao limpar sessão local
+    }
     limparEstadoSessao()
   }
 
@@ -108,6 +139,7 @@ export const useAuthStore = defineStore('auth', () => {
     abrirModalLogin,
     fecharModalLogin,
     login,
+    verificarSessao,
     logout,
   }
 })

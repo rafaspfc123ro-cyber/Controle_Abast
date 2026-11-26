@@ -1,5 +1,6 @@
 // src/services/api.js
-const RAW_BASE_URL = import.meta.env.VITE_API_URL || 'http://localhost:3000/api'
+const RAW_BASE_URL =
+  import.meta.env.VITE_API_URL || 'http://localhost:2399/api/controle-abast'
 export const API_BASE_URL = RAW_BASE_URL.replace(/\/+$/, '')
 
 export const TOKEN_STORAGE_KEY = 'controlabast_token'
@@ -91,6 +92,7 @@ async function request(endpoint, options = {}) {
   const response = await fetch(buildUrl(endpoint, params), {
     method,
     headers: requestHeaders,
+    credentials: 'include',
     body: method === 'GET' || method === 'HEAD' ? undefined : payload,
     signal,
   })

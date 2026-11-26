@@ -1,5 +1,5 @@
 <script setup>
-import { watch } from 'vue'
+import { watch, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
   Home,
@@ -26,8 +26,8 @@ const abrirModalLoginAdmin = () => {
   authStore.abrirModalLogin()
 }
 
-const fazerLogout = () => {
-  authStore.logout()
+const fazerLogout = async () => {
+  await authStore.logout()
   store.mostrarNotificacaoCentro({
     tipo: 'sucesso',
     titulo: 'Sessão Encerrada',
@@ -37,6 +37,11 @@ const fazerLogout = () => {
     router.push('/')
   }
 }
+
+onMounted(async () => {
+  await authStore.verificarSessao()
+  await store.fetchCadastros()
+})
 
 // Alerta se o usuário tentar acessar rota protegida sem estar autenticado
 watch(
