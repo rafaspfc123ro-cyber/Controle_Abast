@@ -1,18 +1,23 @@
 {
   "name": "controle-abast-backend",
-  "version": "1.0.0",
+  "version": "1.1.0",
   "private": true,
   "type": "module",
-  "description": "API REST para o sistema ControlAbast",
+  "description": "API REST para o sistema ControlAbast (Padrão DASS)",
   "scripts": {
     "start": "node src/server.js",
-    "dev": "node --watch src/server.js"
+    "dev": "node --watch src/server.js",
+    "db:migrate": "node src/database/migrate.js",
+    "db:migrate:revert": "node src/database/migrate.js revert"
   },
   "dependencies": {
+    "cookie-parser": "^1.4.7",
     "cors": "^2.8.5",
     "dotenv": "^16.4.7",
     "express": "^5.1.0",
-    "jsonwebtoken": "^9.0.2"
+    "jsonwebtoken": "^9.0.2",
+    "pg": "^8.13.1",
+    "typeorm": "^0.3.20"
   },
   "engines": {
     "node": ">=20.0.0"
