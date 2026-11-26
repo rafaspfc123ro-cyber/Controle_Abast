@@ -1,6 +1,8 @@
 // src/stores/registros.js
 import { defineStore } from 'pinia'
 import { ref, computed, watch } from 'vue'
+import { api } from '../services/api'
+import { useAuthStore } from './auth'
 
 // Limpeza única dos dados padrões mockados anteriores para iniciar o app totalmente limpo
 if (
@@ -19,7 +21,6 @@ if (
 const MARCAS_PADRAO = []
 const CELULAS_PADRAO = []
 const PRODUTOS_PADRAO = []
-const DADOS_INICIAIS = []
 
 // Administrador Master padrão (conforme solicitado: 3014716 - Rafael Oliveira da Silva)
 const ADMINS_PADRAO = [
@@ -33,6 +34,7 @@ const ADMINS_PADRAO = [
 ]
 
 export const useRegistrosStore = defineStore('registros', () => {
+  const authStore = useAuthStore()
   // 1. Marcas cadastradas
   const marcasSalvas = localStorage.getItem('controlabast_marcas')
   const marcas = ref(marcasSalvas ? JSON.parse(marcasSalvas) : MARCAS_PADRAO)
@@ -227,67 +229,105 @@ export const useRegistrosStore = defineStore('registros', () => {
     return { ok: true, adicionados, ignorados, total: celulas.value.length }
   }
 
-  // 4. Registros de abastecimento e resíduo
-  const dadosSalvos =
-    localStorage.getItem('controlabast_registros_v2') ||
-    localStorage.getItem('controlabast_registros')
-  let dadosIniciais = DADOS_INICIAIS
+  // 4. Registros de abastecimento e resíduo (conectado à API REST)
+  const registros = ref([])
+  const loading = ref(false)
+  const error = ref(null)
 
-  if (dadosSalvos) {
+  const normalizarRegistro = (item) => ({
+    ...item,
+    cracha:
+      item.cracha ||
+      (item.nome && item.nome.includes('Crachá')
+        ? item.nome.replace('Crachá', '').trim()
+        : item.nome || '—'),
+  })
+
+  const fetchRegistros = async (params = {}) => {
+    loading.value = true
+    error.value = null
     try {
-      const parsed = JSON.parse(dadosSalvos)
-      if (Array.isArray(parsed) && parsed.length > 0) {
-        dadosIniciais = parsed.map((item) => ({
-          ...item,
-          marca: item.marca || 'NIKE',
-          cracha:
-            item.cracha ||
-            (item.nome && item.nome.includes('Crachá')
-              ? item.nome.replace('Crachá', '').trim()
-              : item.nome || '—'),
-        }))
-      }
-    } catch {
-      dadosIniciais = DADOS_INICIAIS
+      const res = await api.get('/registros', { params })
+      const lista = Array.isArray(res) ? res : res?.data || res?.registros || []
+      registros.value = lista.map(normalizarRegistro)
+      return { ok: true, data: registros.value }
+    } catch (err) {
+      error.value = err?.message || 'Erro ao carregar registros do servidor.'
+      return { ok: false, msg: error.value }
+    } finally {
+      loading.value = false
     }
   }
 
-  const registros = ref(dadosIniciais)
-
-  watch(
-    registros,
-    (novos) => {
-      localStorage.setItem('controlabast_registros_v2', JSON.stringify(novos))
-      localStorage.setItem('controlabast_registros', JSON.stringify(novos))
-    },
-    { deep: true },
-  )
-
-  const adicionarRegistro = (registro) => {
-    registros.value.unshift({
-      id: Date.now(),
-      ...registro,
-    })
-  }
-
-  const removerRegistro = (id) => {
-    registros.value = registros.value.filter((reg) => reg.id !== id)
-  }
-
-  const atualizarRegistro = (id, dadosAtualizados) => {
-    const index = registros.value.findIndex((reg) => reg.id === id)
-    if (index !== -1) {
-      registros.value[index] = {
-        ...registros.value[index],
-        ...dadosAtualizados,
-      }
-      return { ok: true, msg: 'Lançamento atualizado com sucesso!' }
+  const adicionarRegistro = async (dados) => {
+    loading.value = true
+    error.value = null
+    try {
+      const res = await api.post('/registros', dados)
+      const criado = res?.registro || res?.data || res
+      const registroFinal = normalizarRegistro(
+        criado && typeof criado === 'object' && criado.id !== undefined
+          ? criado
+          : {
+              id: Date.now(),
+              ...dados,
+              ...(criado && typeof criado === 'object' ? criado : {}),
+            },
+      )
+      registros.value.unshift(registroFinal)
+      return { ok: true, data: registroFinal, msg: 'Lançamento registrado com sucesso!' }
+    } catch (err) {
+      error.value = err?.message || 'Erro ao registrar lançamento.'
+      return { ok: false, msg: error.value }
+    } finally {
+      loading.value = false
     }
-    return { ok: false, msg: 'Registro não encontrado.' }
+  }
+
+  const atualizarRegistro = async (id, dados) => {
+    loading.value = true
+    error.value = null
+    try {
+      const res = await api.put(`/registros/${id}`, dados)
+      const atualizado = res?.registro || res?.data || res
+      const index = registros.value.findIndex((reg) => reg.id === id)
+      if (index !== -1) {
+        registros.value[index] = normalizarRegistro({
+          ...registros.value[index],
+          ...dados,
+          ...(atualizado && typeof atualizado === 'object' ? atualizado : {}),
+        })
+      }
+      return {
+        ok: true,
+        data: index !== -1 ? registros.value[index] : atualizado,
+        msg: 'Lançamento atualizado com sucesso!',
+      }
+    } catch (err) {
+      error.value = err?.message || 'Erro ao atualizar lançamento.'
+      return { ok: false, msg: error.value }
+    } finally {
+      loading.value = false
+    }
+  }
+
+  const excluirRegistro = async (id) => {
+    loading.value = true
+    error.value = null
+    try {
+      await api.delete(`/registros/${id}`)
+      registros.value = registros.value.filter((reg) => reg.id !== id)
+      return { ok: true, msg: 'Lançamento excluído com sucesso!' }
+    } catch (err) {
+      error.value = err?.message || 'Erro ao excluir lançamento.'
+      return { ok: false, msg: error.value }
+    } finally {
+      loading.value = false
+    }
   }
 
   // ----------------------------------------------------
-  // 5. Gestão de Administradores e Usuário Logado
+  // 5. Gestão de Administradores e Usuário Logado (integrado à authStore)
   // ----------------------------------------------------
   const adminsSalvos = localStorage.getItem('controlabast_admins')
   const admins = ref(adminsSalvos ? JSON.parse(adminsSalvos) : ADMINS_PADRAO)
@@ -305,34 +345,18 @@ export const useRegistrosStore = defineStore('registros', () => {
     { deep: true },
   )
 
-  const loginSalvo = localStorage.getItem('controlabast_admin_ativo')
-  const usuarioAdminLogado = ref(loginSalvo ? JSON.parse(loginSalvo) : null)
-  const isAdmin = computed(() => !!usuarioAdminLogado.value)
+  const usuarioAdminLogado = computed(() => authStore.usuario)
+  const isAdmin = computed(() => authStore.isAdmin)
 
-  watch(
-    usuarioAdminLogado,
-    (val) => {
-      if (val) {
-        localStorage.setItem('controlabast_admin_ativo', JSON.stringify(val))
-      } else {
-        localStorage.removeItem('controlabast_admin_ativo')
-      }
-    },
-    { deep: true },
-  )
-
-  const loginAdmin = (cracha) => {
-    const crachaLimpo = (cracha || '').trim()
-    const encontrado = admins.value.find((a) => a.cracha === crachaLimpo)
-    if (encontrado) {
-      usuarioAdminLogado.value = { ...encontrado }
-      return { ok: true, usuario: encontrado }
+  const loginAdmin = async (credenciais) => {
+    if (typeof credenciais === 'string') {
+      return authStore.login({ cracha: credenciais, senha: '' })
     }
-    return { ok: false, msg: 'Crachá não autorizado como administrador.' }
+    return authStore.login(credenciais)
   }
 
   const logoutAdmin = () => {
-    usuarioAdminLogado.value = null
+    authStore.logout()
   }
 
   const adicionarAdmin = ({ cracha, nome }) => {
@@ -470,13 +494,22 @@ export const useRegistrosStore = defineStore('registros', () => {
     notificacaoCentro.value.aberto = false
   }
 
-  const validarEExecutarExclusao = () => {
+  const validarEExecutarExclusao = async () => {
     let resultado = null
     if (typeof modalExclusao.value.onConfirm === 'function') {
-      resultado = modalExclusao.value.onConfirm()
+      resultado = await modalExclusao.value.onConfirm()
     }
 
     fecharModalExclusao()
+
+    if (resultado && resultado.ok === false) {
+      mostrarNotificacaoCentro({
+        tipo: 'erro',
+        titulo: resultado.titulo || 'Erro na Operação',
+        mensagem: resultado.msg || 'Não foi possível concluir a operação.',
+      })
+      return { ok: false, msg: resultado.msg }
+    }
 
     const tituloSucesso = (resultado && resultado.titulo) || 'Excluído com Sucesso!'
     const msgSucesso =
@@ -572,9 +605,13 @@ export const useRegistrosStore = defineStore('registros', () => {
     removerCelula,
     importarCelulasEmLote,
     registros,
+    loading,
+    error,
+    fetchRegistros,
     adicionarRegistro,
-    removerRegistro,
     atualizarRegistro,
+    excluirRegistro,
+    removerRegistro: excluirRegistro,
     admins,
     usuarioAdminLogado,
     isAdmin,

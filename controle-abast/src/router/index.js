@@ -6,6 +6,7 @@ import Registros from '../views/Registros.vue'
 import Cadastros from '../views/Cadastros.vue'
 import Dashboard from '../views/Dashboard.vue'
 import Usuarios from '../views/Usuarios.vue'
+import { useAuthStore } from '../stores/auth'
 
 const router = createRouter({
   history: createWebHistory(import.meta.env.BASE_URL),
@@ -30,11 +31,11 @@ const router = createRouter({
   ],
 })
 
-// Guarda de navegação para rotas restritas aos administradores
+// Guarda de navegação para rotas restritas aos usuários autenticados
 router.beforeEach((to, _from, next) => {
   if (to.meta.requiresAdmin) {
-    const adminAtivo = localStorage.getItem('controlabast_admin_ativo')
-    if (!adminAtivo) {
+    const authStore = useAuthStore()
+    if (!authStore.isAuthenticated || !authStore.isAdmin) {
       return next({ path: '/', query: { loginRequired: 'true' } })
     }
   }

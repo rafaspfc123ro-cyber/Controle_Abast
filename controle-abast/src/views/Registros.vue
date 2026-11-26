@@ -1,5 +1,5 @@
 <script setup>
-import { ref, computed } from 'vue'
+import { ref, computed, onMounted } from 'vue'
 import {
   RotateCcw,
   Trash2,
@@ -16,10 +16,15 @@ import {
   AlertCircle,
   Tag,
   Scale,
+  Loader2,
 } from 'lucide-vue-next'
 import { useRegistrosStore } from '../stores/registros'
 
 const store = useRegistrosStore()
+
+onMounted(() => {
+  store.fetchRegistros()
+})
 
 // ----------------------------------------------------
 // Estado do Modal de Edição de Lançamento (Apenas Admin)
@@ -75,7 +80,7 @@ const abrirLista = (e) => {
   }
 }
 
-const salvarEdicao = () => {
+const salvarEdicao = async () => {
   if (
     !formEdicao.value.data ||
     !formEdicao.value.marca ||
@@ -87,6 +92,8 @@ const salvarEdicao = () => {
     erroEdicao.value = 'Por favor, preencha todos os campos para salvar a alteração.'
     return
   }
+
+  erroEdicao.value = ''
 
   const [y, m, d] = formEdicao.value.data.split('-')
   const dataFormatada = `${d}/${m}/${y}`
@@ -100,7 +107,7 @@ const salvarEdicao = () => {
   const qtdNum = Number(formEdicao.value.qtd)
   const vlrTot = formEdicao.value.tipo === 'Abastecimento' ? qtdNum * vlrUnit : 0
 
-  const res = store.atualizarRegistro(formEdicao.value.id, {
+  const res = await store.atualizarRegistro(formEdicao.value.id, {
     tipo: formEdicao.value.tipo,
     dataHora: dataHoraFinal,
     marca: formEdicao.value.marca,
@@ -228,9 +235,17 @@ const removerRegistro = (id) => {
     descricao:
       'Tem certeza que deseja excluir este lançamento? Esta ação removerá o registro e atualizará todos os relatórios.',
     itemNome: itemDesc,
-    onConfirm: () => {
-      store.removerRegistro(id)
+    onConfirm: async () => {
+      const res = await store.excluirRegistro(id)
+      if (!res.ok) {
+        return {
+          ok: false,
+          titulo: 'Erro ao Excluir',
+          msg: res.msg || 'Não foi possível excluir o lançamento.',
+        }
+      }
       return {
+        ok: true,
         titulo: 'Lançamento Removido!',
         msg: 'O registro foi excluído e os totais foram recalculados com sucesso.',
       }
@@ -449,9 +464,26 @@ const exportarCSV = () => {
       </div>
     </div>
 
+    <!-- Erro ao carregar ou operar registros -->
+    <div v-if="store.error" class="api-error-banner">
+      <div class="api-error-banner-content">
+        <AlertCircle :size="18" />
+        <span>{{ store.error }}</span>
+      </div>
+      <button type="button" @click="store.fetchRegistros()" class="btn-retry-inline">
+        <RotateCcw :size="14" /> Tentar novamente
+      </button>
+    </div>
+
     <!-- Tabela de Registros -->
     <div class="modern-card table-card">
-      <div v-if="registrosFiltrados.length === 0" class="empty-state">
+      <div v-if="store.loading && store.registros.length === 0" class="empty-state">
+        <Loader2 :size="40" class="empty-icon spin-icon" />
+        <h3>Carregando registros...</h3>
+        <p>Buscando lançamentos do setor químico no servidor.</p>
+      </div>
+
+      <div v-else-if="registrosFiltrados.length === 0" class="empty-state">
         <Filter :size="40" class="empty-icon" />
         <h3>Nenhum registro encontrado</h3>
         <p>Tente alterar ou limpar os filtros de busca acima.</p>
@@ -656,11 +688,18 @@ const exportarCSV = () => {
               </div>
 
               <div class="edit-modal-actions">
-                <button type="button" @click="fecharModalEdicao" class="btn-secondary">
+                <button
+                  type="button"
+                  @click="fecharModalEdicao"
+                  class="btn-secondary"
+                  :disabled="store.loading"
+                >
                   Cancelar
                 </button>
-                <button type="submit" class="btn-primary">
-                  <Save :size="17" /> Salvar Alterações
+                <button type="submit" class="btn-primary" :disabled="store.loading">
+                  <Loader2 v-if="store.loading" :size="17" class="spin-icon" />
+                  <Save v-else :size="17" />
+                  {{ store.loading ? 'Salvando...' : 'Salvar Alterações' }}
                 </button>
               </div>
             </form>
