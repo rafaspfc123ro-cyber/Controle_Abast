@@ -1,5 +1,5 @@
 <script setup>
-import { ref, watch, nextTick } from 'vue'
+import { watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import {
   Home,
@@ -11,67 +11,34 @@ import {
   UserCheck,
   Lock,
   LogOut,
-  KeyRound,
-  X,
-  AlertCircle,
-  IdCard,
 } from 'lucide-vue-next'
 import ModalConfirmarExclusao from './components/ModalConfirmarExclusao.vue'
+import ModalLogin from './components/ModalLogin.vue'
 import { useRegistrosStore } from './stores/registros'
+import { useAuthStore } from './stores/auth'
 
 const route = useRoute()
 const router = useRouter()
 const store = useRegistrosStore()
-
-const modalLoginAberto = ref(false)
-const crachaLogin = ref('')
-const erroLogin = ref('')
-const inputLoginRef = ref(null)
+const authStore = useAuthStore()
 
 const abrirModalLoginAdmin = () => {
-  crachaLogin.value = ''
-  erroLogin.value = ''
-  modalLoginAberto.value = true
-  nextTick(() => {
-    inputLoginRef.value?.focus()
-  })
-}
-
-const fecharModalLogin = () => {
-  modalLoginAberto.value = false
-  crachaLogin.value = ''
-  erroLogin.value = ''
-}
-
-const executarLoginAdmin = () => {
-  if (!crachaLogin.value.trim()) {
-    erroLogin.value = 'Informe o número do crachá do administrador.'
-    return
-  }
-
-  const res = store.loginAdmin(crachaLogin.value)
-  if (res.ok) {
-    fecharModalLogin()
-    store.mostrarNotificacaoCentro({
-      tipo: 'sucesso',
-      titulo: 'Modo Administrador Ativo!',
-      mensagem: `Bem-vindo, ${res.usuario.nome}! Permissões de edição e exclusão liberadas.`,
-    })
-  } else {
-    erroLogin.value = res.msg || 'Crachá não autorizado como administrador.'
-  }
+  authStore.abrirModalLogin()
 }
 
 const fazerLogout = () => {
-  store.logoutAdmin()
+  authStore.logout()
   store.mostrarNotificacaoCentro({
     tipo: 'sucesso',
     titulo: 'Sessão Encerrada',
-    mensagem: 'Você saiu do modo administrador com sucesso.',
+    mensagem: 'Você saiu da sua conta com sucesso.',
   })
+  if (route.meta?.requiresAdmin) {
+    router.push('/')
+  }
 }
 
-// Alerta se o usuário tentar acessar rota protegida sem estar logado
+// Alerta se o usuário tentar acessar rota protegida sem estar autenticado
 watch(
   () => route.query.loginRequired,
   (val) => {
@@ -80,7 +47,7 @@ watch(
       store.mostrarNotificacaoCentro({
         tipo: 'alerta',
         titulo: 'Acesso Restrito',
-        mensagem: 'Esta página requer perfil de Administrador. Identifique-se com seu crachá.',
+        mensagem: 'Esta página requer autenticação. Faça login para continuar.',
       })
       router.replace({ path: route.path, query: {} })
     }
@@ -119,7 +86,7 @@ watch(
             <span>Registros</span>
           </div>
         </router-link>
-        <router-link v-if="store.isAdmin" to="/cadastros">
+        <router-link v-if="authStore.isAdmin" to="/cadastros">
           <div class="link-content">
             <Database :size="19" />
             <span>Cadastro</span>
@@ -133,8 +100,8 @@ watch(
           </div>
         </router-link>
 
-        <!-- Opção que aparece debaixo do dashboard quando entra com admin -->
-        <router-link v-if="store.isAdmin" to="/usuarios" class="link-admin">
+        <!-- Opção que aparece debaixo do dashboard quando autenticado como admin -->
+        <router-link v-if="authStore.isAdmin" to="/usuarios" class="link-admin">
           <div class="link-content">
             <UserCheck :size="19" />
             <span>Gestão de Acessos</span>
@@ -144,8 +111,8 @@ watch(
       </nav>
 
       <div class="sidebar-footer">
-        <!-- Modo Padrão (Sem Admin) -->
-        <div v-if="!store.isAdmin" class="system-status">
+        <!-- Modo Padrão (Não Autenticado) -->
+        <div v-if="!authStore.isAuthenticated" class="system-status">
           <div class="status-indicator">
             <span class="status-dot"></span>
             <span class="status-text">Setor Químico Ativo</span>
@@ -156,18 +123,24 @@ watch(
           </button>
         </div>
 
-        <!-- Modo Administrador Ativo (Simples e Direto) -->
+        <!-- Modo Autenticado (Exibe nome do usuário e opção de sair) -->
         <div v-else class="system-status system-status-admin">
           <div class="admin-status-head">
             <span class="admin-role-badge">
               <ShieldCheck :size="13" />
-              {{ store.usuarioAdminLogado?.isMaster ? 'Master' : 'Admin' }}
+              {{
+                authStore.usuario?.isMaster
+                  ? 'Master'
+                  : authStore.usuario?.perfil || 'Admin'
+              }}
             </span>
-            <span class="admin-cracha-tag">Crachá: {{ store.usuarioAdminLogado?.cracha }}</span>
+            <span v-if="authStore.usuario?.cracha" class="admin-cracha-tag">
+              Crachá: {{ authStore.usuario.cracha }}
+            </span>
           </div>
-          <p class="admin-user-name">{{ store.usuarioAdminLogado?.nome }}</p>
+          <p class="admin-user-name">{{ authStore.usuario?.nome || 'Usuário' }}</p>
           <button type="button" @click="fazerLogout" class="btn-sidebar-logout">
-            <LogOut :size="13" /> Sair do Modo Admin
+            <LogOut :size="13" /> Sair
           </button>
         </div>
       </div>
@@ -182,61 +155,8 @@ watch(
     <!-- Modal Central de Exclusão Direta e Notificação Central -->
     <ModalConfirmarExclusao />
 
-    <!-- Modal de Login -->
-    <Teleport to="body">
-      <Transition name="fade">
-        <div v-if="modalLoginAberto" class="admin-modal-backdrop" @click.self="fecharModalLogin">
-          <div class="admin-modal-card">
-            <div class="admin-modal-header">
-              <div class="admin-modal-icon">
-                <Lock :size="20" />
-              </div>
-              <div class="admin-modal-titles">
-                <h3>Login</h3>
-                <p>Identifique-se com o crachá de administrador para liberar edição e exclusão</p>
-              </div>
-              <button
-                type="button"
-                @click="fecharModalLogin"
-                class="btn-close-modal"
-                title="Fechar"
-              >
-                <X :size="20" />
-              </button>
-            </div>
-
-            <form @submit.prevent="executarLoginAdmin" class="admin-login-form">
-              <div class="input-group">
-                <label><IdCard :size="15" /> Crachá de Acesso</label>
-                <input
-                  ref="inputLoginRef"
-                  type="text"
-                  v-model="crachaLogin"
-                  class="modern-input input-admin-cracha"
-                  placeholder="Digite o crachá..."
-                  required
-                  autofocus
-                />
-              </div>
-
-              <div v-if="erroLogin" class="alert-danger alert-login">
-                <AlertCircle :size="16" />
-                <span>{{ erroLogin }}</span>
-              </div>
-
-              <div class="admin-modal-actions">
-                <button type="button" @click="fecharModalLogin" class="btn-secondary">
-                  Cancelar
-                </button>
-                <button type="submit" class="btn-primary btn-admin-enter">
-                  <KeyRound :size="17" /> Login
-                </button>
-              </div>
-            </form>
-          </div>
-        </div>
-      </Transition>
-    </Teleport>
+    <!-- Modal Central de Login -->
+    <ModalLogin />
   </div>
 </template>
 
@@ -310,24 +230,25 @@ body {
   min-height: 100vh;
 }
 
-/* Sidebar */
+/* Sidebar com bordas arredondadas e flutuante */
 .sidebar {
   width: 270px;
   background-color: var(--sidebar-bg);
   border: 1px solid var(--sidebar-border);
-  border-radius: 20px;
-  margin: 12px 0 12px 14px;
-  height: calc(100vh - 24px);
+  border-radius: 24px;
+  margin: 14px;
+  height: calc(100vh - 28px);
   position: sticky;
-  top: 12px;
+  top: 14px;
   padding: 24px 16px;
   color: white;
   display: flex;
   flex-direction: column;
   justify-content: space-between;
   flex-shrink: 0;
-  box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.2);
+  box-shadow: 0 12px 32px -4px rgba(11, 15, 25, 0.4);
   z-index: 50;
+  overflow: hidden;
 }
 
 .sidebar-header {
@@ -706,6 +627,57 @@ body {
   font-size: 0.92rem;
   font-weight: 500;
   animation: slideDown 0.3s ease;
+}
+
+.api-error-banner {
+  background: #fef2f2;
+  border: 1px solid #fecaca;
+  color: #b91c1c;
+  padding: 12px 16px;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  font-size: 0.9rem;
+  font-weight: 500;
+  animation: slideDown 0.3s ease;
+}
+
+.api-error-banner-content {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.btn-retry-inline {
+  background: #ffffff;
+  border: 1px solid #fca5a5;
+  color: #b91c1c;
+  padding: 6px 12px;
+  border-radius: var(--radius-sm);
+  font-size: 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  white-space: nowrap;
+  transition: all 0.2s ease;
+}
+
+.btn-retry-inline:hover {
+  background: #fee2e2;
+}
+
+.spin-icon {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 @keyframes slideDown {

@@ -1,15 +1,16 @@
 <script setup>
-import { Trash2, X, CheckCircle2, AlertCircle } from 'lucide-vue-next'
+import { Trash2, X, CheckCircle2, AlertCircle, Loader2 } from 'lucide-vue-next'
 import { useRegistrosStore } from '../stores/registros'
 
 const store = useRegistrosStore()
 
 const cancelar = () => {
+  if (store.loading) return
   store.fecharModalExclusao()
 }
 
-const confirmar = () => {
-  store.validarEExecutarExclusao()
+const confirmar = async () => {
+  await store.validarEExecutarExclusao()
 }
 
 // Fechar com tecla ESC
@@ -61,11 +62,25 @@ if (typeof window !== 'undefined') {
 
           <!-- Botões de Ação Diretos (Sem Senha) -->
           <div class="modal-actions-row">
-            <button type="button" @click="cancelar" class="btn-modal-cancel">Cancelar</button>
+            <button
+              type="button"
+              @click="cancelar"
+              class="btn-modal-cancel"
+              :disabled="store.loading"
+            >
+              Cancelar
+            </button>
 
-            <button type="button" @click="confirmar" class="btn-modal-delete" autofocus>
-              <Trash2 :size="16" />
-              <span>Confirmar Exclusão</span>
+            <button
+              type="button"
+              @click="confirmar"
+              class="btn-modal-delete"
+              :disabled="store.loading"
+              autofocus
+            >
+              <Loader2 v-if="store.loading" :size="16" class="spin-icon" />
+              <Trash2 v-else :size="16" />
+              <span>{{ store.loading ? 'Excluindo...' : 'Confirmar Exclusão' }}</span>
             </button>
           </div>
         </div>
@@ -378,6 +393,22 @@ if (typeof window !== 'undefined') {
 
 .btn-modal-delete:active {
   transform: translateY(0) scale(0.98);
+}
+
+.btn-modal-delete:disabled,
+.btn-modal-cancel:disabled {
+  opacity: 0.7;
+  cursor: not-allowed;
+}
+
+.spin-icon {
+  animation: spin 1s linear infinite;
+}
+
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
 }
 
 /* Animação de Shake para erro de senha */

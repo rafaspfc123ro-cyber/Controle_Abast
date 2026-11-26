@@ -27,11 +27,13 @@ import {
   HardDrive,
 } from 'lucide-vue-next'
 import { useRegistrosStore } from '../stores/registros'
+import { useAuthStore } from '../stores/auth'
 import BrandLogo from '../components/BrandLogo.vue'
 
 const route = useRoute()
 const router = useRouter()
 const store = useRegistrosStore()
+const authStore = useAuthStore()
 
 // Controle da tela ativa ('marcas' | 'produtos' | 'celulas' | null para menu)
 const cadastroAtivo = ref(route.query.tipo || null)
@@ -375,6 +377,9 @@ onMounted(() => {
   if (typeof window !== 'undefined') {
     window.addEventListener('keydown', onKeydownModal)
   }
+  if (store.registros.length === 0) {
+    store.fetchRegistros()
+  }
 })
 
 onUnmounted(() => {
@@ -606,7 +611,7 @@ const exportarLista = (tipo) => {
       <h2>Acesso Restrito</h2>
       <p>A tela de Cadastros Gerais é restrita aos administradores autorizados.</p>
       <div class="restrito-actions">
-        <button type="button" @click="store.modalAdminAberto = true" class="btn-primary">
+        <button type="button" @click="authStore.abrirModalLogin()" class="btn-primary">
           <LogIn :size="16" />
           <span>Fazer Login como Administrador</span>
         </button>

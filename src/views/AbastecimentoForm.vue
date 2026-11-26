@@ -15,6 +15,7 @@ import {
   Lock,
   AlertCircle,
   X,
+  Loader2,
 } from 'lucide-vue-next'
 import { useRegistrosStore } from '../stores/registros'
 
@@ -107,7 +108,7 @@ const solicitarCracha = () => {
   })
 }
 
-const confirmarCrachaESalvar = () => {
+const confirmarCrachaESalvar = async () => {
   const crachaLimpo = (crachaTemp.value || '').trim()
   if (!crachaLimpo) {
     erroCracha.value = 'Por favor, digite ou aproxime o crachá do operador para salvar.'
@@ -115,13 +116,15 @@ const confirmarCrachaESalvar = () => {
     return
   }
 
+  erroCracha.value = ''
+
   // Formatar data YYYY-MM-DD para DD/MM/YYYY
   const [ano, mes, dia] = form.value.data.split('-')
   const dataFormatada = `${dia}/${mes}/${ano}`
   const horaAtual = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
   const qtdNum = Number(form.value.quantidade)
 
-  store.adicionarRegistro({
+  const res = await store.adicionarRegistro({
     tipo: 'Abastecimento',
     dataHora: `${dataFormatada} ${horaAtual}`,
     cracha: crachaLimpo,
@@ -133,6 +136,11 @@ const confirmarCrachaESalvar = () => {
     valorTotal: custoTotalCalculado.value,
     nome: `Crachá ${crachaLimpo}`,
   })
+
+  if (!res.ok) {
+    erroCracha.value = res.msg || 'Erro ao registrar abastecimento. Tente novamente.'
+    return
+  }
 
   sucesso.value = true
 
@@ -419,11 +427,18 @@ const confirmarCrachaESalvar = () => {
               </div>
 
               <div class="cracha-modal-actions">
-                <button type="button" @click="fecharModalCracha" class="btn-secondary">
+                <button
+                  type="button"
+                  @click="fecharModalCracha"
+                  class="btn-secondary"
+                  :disabled="store.loading"
+                >
                   Cancelar
                 </button>
-                <button type="submit" class="btn-primary">
-                  <CheckCircle2 :size="18" /> Confirmar e Salvar
+                <button type="submit" class="btn-primary" :disabled="store.loading">
+                  <Loader2 v-if="store.loading" :size="18" class="spin-icon" />
+                  <CheckCircle2 v-else :size="18" />
+                  {{ store.loading ? 'Salvando...' : 'Confirmar e Salvar' }}
                 </button>
               </div>
             </form>

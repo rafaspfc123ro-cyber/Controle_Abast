@@ -21,6 +21,8 @@ import {
   Scale,
   Lock,
   AlertCircle,
+  Loader2,
+  RotateCcw,
 } from 'lucide-vue-next'
 import { useRegistrosStore } from '../stores/registros'
 import BrandLogo from '../components/BrandLogo.vue'
@@ -90,6 +92,7 @@ watch(painelAberto, (val) => {
 
 onMounted(() => {
   window.addEventListener('keydown', handleKeyDown)
+  store.fetchRegistros()
 })
 
 onUnmounted(() => {
@@ -164,7 +167,7 @@ const solicitarCrachaResiduo = () => {
   })
 }
 
-const confirmarCrachaESalvar = () => {
+const confirmarCrachaESalvar = async () => {
   const crachaLimpo = (crachaTemp.value || '').trim()
   if (!crachaLimpo) {
     erroCracha.value = 'Por favor, digite ou aproxime o crachá do operador para salvar.'
@@ -172,13 +175,15 @@ const confirmarCrachaESalvar = () => {
     return
   }
 
+  erroCracha.value = ''
+
   if (operacaoPendente.value === 'abastecimento') {
     const [ano, mes, dia] = formAbast.value.data.split('-')
     const dataFormatada = `${dia}/${mes}/${ano}`
     const horaAtual = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
     const qtdNum = Number(formAbast.value.quantidade)
 
-    store.adicionarRegistro({
+    const res = await store.adicionarRegistro({
       tipo: 'Abastecimento',
       dataHora: `${dataFormatada} ${horaAtual}`,
       cracha: crachaLimpo,
@@ -190,6 +195,11 @@ const confirmarCrachaESalvar = () => {
       valorTotal: custoTotalAbastCalculado.value,
       nome: `Crachá ${crachaLimpo}`,
     })
+
+    if (!res.ok) {
+      erroCracha.value = res.msg || 'Erro ao salvar abastecimento.'
+      return
+    }
 
     sucessoAbastecimento.value = true
 
@@ -214,7 +224,7 @@ const confirmarCrachaESalvar = () => {
     const horaAtual = new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })
     const qtdNum = Number(formResiduo.value.quantidade)
 
-    store.adicionarRegistro({
+    const res = await store.adicionarRegistro({
       tipo: 'Resíduo',
       dataHora: `${dataFormatada} ${horaAtual}`,
       cracha: crachaLimpo,
@@ -226,6 +236,11 @@ const confirmarCrachaESalvar = () => {
       valorTotal: custoTotalResiduoCalculado.value,
       nome: `Crachá ${crachaLimpo}`,
     })
+
+    if (!res.ok) {
+      erroCracha.value = res.msg || 'Erro ao salvar resíduo.'
+      return
+    }
 
     sucessoResiduo.value = true
 
@@ -947,15 +962,23 @@ const formatarMoeda = (valor) => {
               </div>
 
               <div class="cracha-modal-actions">
-                <button type="button" @click="fecharModalCracha" class="btn-secondary">
+                <button
+                  type="button"
+                  @click="fecharModalCracha"
+                  class="btn-secondary"
+                  :disabled="store.loading"
+                >
                   Cancelar
                 </button>
                 <button
                   type="submit"
                   class="btn-primary"
                   :class="{ 'btn-amber': operacaoPendente === 'residuo' }"
+                  :disabled="store.loading"
                 >
-                  <CheckCircle2 :size="18" /> Confirmar e Salvar
+                  <Loader2 v-if="store.loading" :size="18" class="spin-icon" />
+                  <CheckCircle2 v-else :size="18" />
+                  {{ store.loading ? 'Salvando...' : 'Confirmar e Salvar' }}
                 </button>
               </div>
             </form>
@@ -1101,8 +1124,24 @@ const formatarMoeda = (valor) => {
         </button>
       </div>
 
+      <div v-if="store.error" class="api-error-banner">
+        <div class="api-error-banner-content">
+          <AlertCircle :size="18" />
+          <span>{{ store.error }}</span>
+        </div>
+        <button type="button" @click="store.fetchRegistros()" class="btn-retry-inline">
+          <RotateCcw :size="14" /> Tentar novamente
+        </button>
+      </div>
+
       <div class="modern-card table-card">
-        <div v-if="registrosDoDia.length === 0" class="empty-state">
+        <div v-if="store.loading && store.registros.length === 0" class="empty-state">
+          <Loader2 :size="36" class="empty-icon spin-icon" />
+          <h3>Carregando movimentações...</h3>
+          <p>Buscando registros atualizados do servidor.</p>
+        </div>
+
+        <div v-else-if="registrosDoDia.length === 0" class="empty-state">
           <Calendar :size="36" class="empty-icon" />
           <h3>Nenhuma movimentação registrada hoje</h3>
           <p>
