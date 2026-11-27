@@ -175,8 +175,8 @@ const registrosFiltrados = computed(() => {
     const regMarca = (reg.marca || '').toUpperCase()
     const bateMarca = filtros.value.marca === 'TODAS' || regMarca === filtros.value.marca
 
-    // Crachá
-    const crachaStr = String(reg.cracha || reg.nome || '').toLowerCase()
+    // Colaborador / Crachá
+    const crachaStr = `${reg.nome || ''} ${reg.cracha || ''} ${reg.matricula || ''}`.toLowerCase()
     const bateCracha =
       !filtros.value.cracha || crachaStr.includes(filtros.value.cracha.toLowerCase())
 
@@ -267,7 +267,8 @@ const exportarCSV = () => {
     'Marca',
     'Célula',
     'Produto Químico',
-    'Crachá',
+    'Colaborador',
+    'Crachá / Matrícula',
     'Quantidade (Kg/L)',
     'Valor Unitário (R$)',
     'Valor Total (R$)',
@@ -279,7 +280,8 @@ const exportarCSV = () => {
     `"${r.marca || '—'}"`,
     `"${r.celula}"`,
     `"${r.produto}"`,
-    `"${r.cracha || r.nome || '—'}"`,
+    `"${r.nome || '—'}"`,
+    `"${r.matricula || r.cracha || '—'}"`,
     `"${Number(r.qtd || 0)
       .toFixed(3)
       .replace('.', ',')}"`,
@@ -385,13 +387,13 @@ const exportarCSV = () => {
       <!-- Grid de Filtros Uniforme e Alinhado -->
       <div class="filters-grid">
         <div class="filter-item">
-          <label class="filter-field-label">Crachá</label>
+          <label class="filter-field-label">Colaborador / Crachá</label>
           <div class="search-input-wrap">
             <IdCard :size="16" class="search-icon" />
             <input
               type="text"
               v-model="filtros.cracha"
-              placeholder="Buscar crachá..."
+              placeholder="Buscar nome ou crachá..."
               class="modern-input filter-input"
             />
           </div>
@@ -499,7 +501,7 @@ const exportarCSV = () => {
               <th>Marca</th>
               <th>Célula</th>
               <th>Produto Químico</th>
-              <th>Crachá</th>
+              <th>Colaborador</th>
               <th class="text-right">Quantidade</th>
               <th class="text-right">Valor Estimado</th>
               <th v-if="store.isAdmin" class="text-center">Ações</th>
@@ -534,9 +536,9 @@ const exportarCSV = () => {
               <td class="font-medium">{{ item.celula }}</td>
               <td>{{ item.produto }}</td>
               <td class="cell-cracha">
-                <span class="cracha-tag">
+                <span class="cracha-tag" :title="`Matrícula/Crachá: ${item.matricula || item.cracha || '—'}`">
                   <IdCard :size="13" />
-                  {{ item.cracha || item.nome || '—' }}
+                  {{ item.nome || item.cracha || '—' }}
                 </span>
               </td>
               <td class="text-right font-semibold">

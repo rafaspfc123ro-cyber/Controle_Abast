@@ -1,13 +1,14 @@
 import app from './app.js'
 import { env } from './config/env.js'
-import { getRegistros, getUsers } from './services/storage.js'
+import { AppDataSource } from './database/data-source.js'
 
 async function start() {
-  // Ensures initial data files exist before accepting traffic.
-  await Promise.all([getUsers(), getRegistros()])
+  await AppDataSource.initialize()
 
-  app.listen(env.port, () => {
-    console.log(`ControlAbast API rodando em http://localhost:${env.port}/api`)
+  app.listen(env.port, '0.0.0.0', () => {
+    console.log(
+      `ControlAbast API rodando em http://0.0.0.0:${env.port}/api (schema: ${env.dbSchema})`,
+    )
   })
 }
 

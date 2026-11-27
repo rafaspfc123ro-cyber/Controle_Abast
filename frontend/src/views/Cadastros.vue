@@ -130,12 +130,11 @@ const onFileChangeAlterarMarca = (event) => {
   const file = event.target.files && event.target.files[0]
   const marca = marcaParaAlterarLogo.value
   if (file && marca) {
-    processarImagemLogo(file, (base64) => {
-      store.definirLogoMarca(marca, base64)
-      feedbackMarca.value = {
-        tipo: 'sucesso',
-        msg: `Logo da marca "${marca}" atualizada com sucesso!`,
-      }
+    processarImagemLogo(file, async (base64) => {
+      const res = await store.definirLogoMarca(marca, base64)
+      feedbackMarca.value = res.ok
+        ? { tipo: 'sucesso', msg: `Logo da marca "${marca}" atualizada com sucesso!` }
+        : { tipo: 'erro', msg: res.msg || 'Erro ao salvar logo.' }
       setTimeout(() => {
         feedbackMarca.value = { tipo: '', msg: '' }
       }, 3500)
@@ -149,8 +148,8 @@ const temLogoPersonalizada = (marca) => {
   return !!(store.logosMarcas && store.logosMarcas[marca.toUpperCase()])
 }
 
-const restaurarLogoMarca = (marca) => {
-  store.removerLogoMarca(marca)
+const restaurarLogoMarca = async (marca) => {
+  await store.removerLogoMarca(marca)
   feedbackMarca.value = {
     tipo: 'sucesso',
     msg: `Logo personalizada de "${marca}" removida (restaurada padrão).`,
@@ -176,15 +175,12 @@ const formatarMoeda = (valor) => {
 }
 
 // Cadastrar Marca
-const salvarMarca = () => {
+const salvarMarca = async () => {
   if (!novaMarca.value.trim()) return
 
   const nome = novaMarca.value.trim()
-  const res = store.adicionarMarca(nome)
+  const res = await store.adicionarMarca(nome, novaLogoPreview.value || null)
   if (res.ok) {
-    if (novaLogoPreview.value) {
-      store.definirLogoMarca(nome, novaLogoPreview.value)
-    }
     feedbackMarca.value = { tipo: 'sucesso', msg: res.msg }
     novaMarca.value = ''
     novaLogoPreview.value = null
@@ -202,9 +198,10 @@ const excluirMarca = (marca) => {
     titulo: 'Excluir Marca',
     descricao: `Tem certeza que deseja excluir a marca "${marca}"? Esta marca deixará de aparecer para novos abastecimentos.`,
     itemNome: `Marca: ${marca}`,
-    onConfirm: () => {
-      const res = store.removerMarca(marca)
+    onConfirm: async () => {
+      const res = await store.removerMarca(marca)
       return {
+        ok: res.ok,
         titulo: res.ok ? 'Marca Excluída!' : 'Atenção',
         msg: res.msg,
       }
@@ -213,10 +210,10 @@ const excluirMarca = (marca) => {
 }
 
 // Cadastrar Produto
-const salvarProduto = () => {
+const salvarProduto = async () => {
   if (!novoProduto.value.nome.trim() || novoProduto.value.valor === '') return
 
-  const res = store.adicionarProduto({
+  const res = await store.adicionarProduto({
     nome: novoProduto.value.nome,
     valor: novoProduto.value.valor,
   })
@@ -238,9 +235,10 @@ const excluirProduto = (id, nome) => {
     titulo: 'Excluir Produto Químico',
     descricao: `Tem certeza que deseja remover o produto "${nome}"?`,
     itemNome: `Produto: ${nome}`,
-    onConfirm: () => {
-      const res = store.removerProduto(id)
+    onConfirm: async () => {
+      const res = await store.removerProduto(id)
       return {
+        ok: res.ok,
         titulo: res.ok ? 'Produto Excluído!' : 'Atenção',
         msg: res.msg,
       }
@@ -249,10 +247,10 @@ const excluirProduto = (id, nome) => {
 }
 
 // Cadastrar Célula de Produção
-const salvarCelula = () => {
+const salvarCelula = async () => {
   if (!novaCelula.value.trim()) return
 
-  const res = store.adicionarCelula(novaCelula.value.trim().toUpperCase())
+  const res = await store.adicionarCelula(novaCelula.value.trim().toUpperCase())
   if (res.ok) {
     feedbackCelula.value = { tipo: 'sucesso', msg: res.msg }
     novaCelula.value = ''
@@ -270,9 +268,10 @@ const excluirCelula = (celula) => {
     titulo: 'Excluir Célula de Produção',
     descricao: `Tem certeza que deseja excluir a célula "${celula}"? Ela deixará de aparecer nas opções de novos abastecimentos.`,
     itemNome: `Célula: ${celula}`,
-    onConfirm: () => {
-      const res = store.removerCelula(celula)
+    onConfirm: async () => {
+      const res = await store.removerCelula(celula)
       return {
+        ok: res.ok,
         titulo: res.ok ? 'Célula Excluída!' : 'Atenção',
         msg: res.msg,
       }
@@ -349,9 +348,10 @@ const onArquivoBackupSelecionado = (event) => {
         descricao:
           'Atenção: A restauração substituirá os dados atuais pelos registros deste arquivo de backup. Deseja prosseguir?',
         itemNome: `Arquivo: ${file.name}`,
-        onConfirm: () => {
-          const res = store.importarBackupCompleto(json)
+        onConfirm: async () => {
+          const res = await store.importarBackupCompleto(json)
           return {
+            ok: res.ok,
             titulo: res.ok ? 'Backup Restaurado!' : 'Atenção',
             msg: res.msg,
           }
@@ -535,7 +535,7 @@ const estatisticasImportacao = computed(() => {
   }
 })
 
-const executarImportacao = () => {
+const executarImportacao = async () => {
   const tipo = tipoImportacao.value
   const lista = itensDetectados.value
   const substituir = modoSubstituicao.value
@@ -546,24 +546,30 @@ const executarImportacao = () => {
   }
 
   if (tipo === 'marcas') {
-    const res = store.importarMarcasEmLote(lista, substituir)
+    const res = await store.importarMarcasEmLote(lista, substituir)
     feedbackMarca.value = {
-      tipo: 'sucesso',
-      msg: `${res.adicionados} marcas importadas com sucesso! (${res.ignorados} duplicadas ignoradas)`,
+      tipo: res.ok ? 'sucesso' : 'erro',
+      msg: res.ok
+        ? `${res.adicionados} marcas importadas com sucesso! (${res.ignorados} duplicadas ignoradas)`
+        : res.msg,
     }
     setTimeout(() => (feedbackMarca.value = { tipo: '', msg: '' }), 4000)
   } else if (tipo === 'produtos') {
-    const res = store.importarProdutosEmLote(lista, substituir)
+    const res = await store.importarProdutosEmLote(lista, substituir)
     feedbackProduto.value = {
-      tipo: 'sucesso',
-      msg: `${res.adicionados} produtos importados com sucesso! (${res.ignorados} duplicados ignorados)`,
+      tipo: res.ok ? 'sucesso' : 'erro',
+      msg: res.ok
+        ? `${res.adicionados} produtos importados com sucesso! (${res.ignorados} duplicados ignorados)`
+        : res.msg,
     }
     setTimeout(() => (feedbackProduto.value = { tipo: '', msg: '' }), 4000)
   } else if (tipo === 'celulas') {
-    const res = store.importarCelulasEmLote(lista, substituir)
+    const res = await store.importarCelulasEmLote(lista, substituir)
     feedbackCelula.value = {
-      tipo: 'sucesso',
-      msg: `${res.adicionados} células importadas com sucesso! (${res.ignorados} duplicadas ignoradas)`,
+      tipo: res.ok ? 'sucesso' : 'erro',
+      msg: res.ok
+        ? `${res.adicionados} células importadas com sucesso! (${res.ignorados} duplicadas ignoradas)`
+        : res.msg,
     }
     setTimeout(() => (feedbackCelula.value = { tipo: '', msg: '' }), 4000)
   }

@@ -1,7 +1,11 @@
+import cookieParser from 'cookie-parser'
 import cors from 'cors'
-import express from 'express'
+import express, { Router } from 'express'
 import { env } from './config/env.js'
+import adminsRoutes from './routes/admins.routes.js'
 import authRoutes from './routes/auth.routes.js'
+import cadastrosRoutes from './routes/cadastros.routes.js'
+import colaboradoresRoutes from './routes/colaboradores.routes.js'
 import registrosRoutes from './routes/registros.routes.js'
 
 const app = express()
@@ -18,14 +22,24 @@ app.use(
   }),
 )
 
-app.use(express.json())
+app.use(cookieParser())
+app.use(express.json({ limit: '5mb' }))
 
-app.get('/api/health', (_req, res) => {
+const apiRouter = Router()
+
+apiRouter.get('/health', (_req, res) => {
   res.status(200).json({ ok: true, service: 'controle-abast-backend' })
 })
 
-app.use('/api/auth', authRoutes)
-app.use('/api/registros', registrosRoutes)
+apiRouter.use('/auth', authRoutes)
+apiRouter.use('/admins', adminsRoutes)
+apiRouter.use('/cadastros', cadastrosRoutes)
+apiRouter.use('/colaboradores', colaboradoresRoutes)
+apiRouter.use('/registros', registrosRoutes)
+
+// Monta em /api (acesso direto) e em / (quando roteado pelo API Gateway que remove /api/controle-abast)
+app.use('/api', apiRouter)
+app.use('/', apiRouter)
 
 app.use((_req, res) => {
   res.status(404).json({ message: 'Rota não encontrada.' })

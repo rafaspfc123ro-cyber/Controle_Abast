@@ -1,5 +1,5 @@
 <script setup>
-import { ref, nextTick } from 'vue'
+import { ref, computed, nextTick, onMounted, onUnmounted } from 'vue'
 import { ShieldCheck, UserPlus, Trash2, AlertCircle, X } from 'lucide-vue-next'
 import { useRegistrosStore } from '../stores/registros'
 
@@ -14,6 +14,7 @@ const novoAdmin = ref({
 })
 
 const feedback = ref({ tipo: '', msg: '' })
+const masterAdmin = computed(() => store.admins.find((a) => a.isMaster) || null)
 
 const abrirModalAdd = () => {
   novoAdmin.value = { cracha: '', nome: '' }
@@ -30,12 +31,13 @@ const fecharModalAdd = () => {
   feedback.value = { tipo: '', msg: '' }
 }
 
-const salvarAdmin = () => {
-  if (!novoAdmin.value.cracha.trim() || !novoAdmin.value.nome.trim()) return
+const salvarAdmin = async () => {
+  if (!novoAdmin.value.cracha.trim()) return
 
-  const res = store.adicionarAdmin({
-    cracha: novoAdmin.value.cracha,
-    nome: novoAdmin.value.nome,
+  const nomeDigitado = novoAdmin.value.nome.trim()
+  const res = await store.adicionarAdmin({
+    matricula: novoAdmin.value.cracha,
+    nome: nomeDigitado,
   })
 
   if (res.ok) {
@@ -43,7 +45,7 @@ const salvarAdmin = () => {
     store.mostrarNotificacaoCentro({
       tipo: 'sucesso',
       titulo: 'Colaborador Autorizado!',
-      mensagem: `${novoAdmin.value.nome} agora possui permissão de edição e exclusão.`,
+      mensagem: res.msg || 'Colaborador agora possui permissão de edição e exclusão.',
     })
   } else {
     feedback.value = { tipo: 'erro', msg: res.msg }
@@ -51,7 +53,7 @@ const salvarAdmin = () => {
 }
 
 const removerAcesso = (admin) => {
-  if (admin.isMaster || admin.cracha === '3014716') {
+  if (admin.isMaster) {
     store.mostrarNotificacaoCentro({
       tipo: 'erro',
       titulo: 'Ação Não Permitida',
@@ -64,9 +66,10 @@ const removerAcesso = (admin) => {
     titulo: 'Revogar Permissão',
     descricao: `Deseja remover as permissões de edição e exclusão de "${admin.nome}"?`,
     itemNome: `Acesso: ${admin.nome}`,
-    onConfirm: () => {
-      const res = store.removerAdmin(admin.cracha)
+    onConfirm: async () => {
+      const res = await store.removerAdmin(admin.matricula || admin.cracha)
       return {
+        ok: res.ok,
         titulo: res.ok ? 'Permissão Revogada!' : 'Atenção',
         msg: res.msg,
       }
@@ -81,9 +84,18 @@ const onKeydown = (e) => {
   }
 }
 
-if (typeof window !== 'undefined') {
-  window.addEventListener('keydown', onKeydown)
-}
+onMounted(() => {
+  store.fetchAdmins()
+  if (typeof window !== 'undefined') {
+    window.addEventListener('keydown', onKeydown)
+  }
+})
+
+onUnmounted(() => {
+  if (typeof window !== 'undefined') {
+    window.removeEventListener('keydown', onKeydown)
+  }
+})
 </script>
 
 <template>
@@ -97,14 +109,12 @@ if (typeof window !== 'undefined') {
     </div>
 
     <!-- Informação do Master Simples -->
-    <div class="master-info-card">
+    <div v-if="masterAdmin" class="master-info-card">
       <div class="master-info-content">
         <ShieldCheck :size="18" class="master-info-icon" />
         <div>
           <span class="master-info-label">Administrador Master:</span>
-          <strong class="master-info-name">{{
-            store.usuarioAdminLogado?.nome || 'Rafael Oliveira da Silva'
-          }}</strong>
+          <strong class="master-info-name">{{ masterAdmin.nome }}</strong>
         </div>
       </div>
       <span class="master-info-badge">Acesso Permanente</span>
@@ -135,21 +145,17 @@ if (typeof window !== 'undefined') {
               </tr>
             </thead>
             <tbody>
-              <tr v-for="adm in store.admins" :key="adm.cracha">
+              <tr v-for="adm in store.admins" :key="adm.matricula || adm.cracha">
                 <td class="font-medium">
                   {{ adm.nome }}
                 </td>
                 <td>
                   <div class="nivel-cell-wrap">
-                    <span
-                      :class="
-                        adm.isMaster || adm.cracha === '3014716' ? 'badge-master' : 'badge-admin'
-                      "
-                    >
-                      {{ adm.isMaster || adm.cracha === '3014716' ? 'Master' : 'Admin' }}
+                    <span :class="adm.isMaster ? 'badge-master' : 'badge-admin'">
+                      {{ adm.isMaster ? 'Master' : 'Admin' }}
                     </span>
                     <button
-                      v-if="!adm.isMaster && adm.cracha !== '3014716'"
+                      v-if="!adm.isMaster"
                       type="button"
                       @click="removerAcesso(adm)"
                       class="btn-icon-danger"
@@ -204,13 +210,12 @@ if (typeof window !== 'undefined') {
               </div>
 
               <div class="input-group">
-                <label>Nome do Colaborador</label>
+                <label>Nome do Colaborador (opcional se cadastrado no DASS)</label>
                 <input
                   type="text"
                   v-model="novoAdmin.nome"
                   class="modern-input"
-                  placeholder="Digite o nome do colaborador..."
-                  required
+                  placeholder="Digite o nome ou deixe em branco para buscar..."
                 />
               </div>
 

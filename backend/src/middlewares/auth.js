@@ -1,41 +1,68 @@
 import jwt from 'jsonwebtoken'
 import { env } from '../config/env.js'
+import { ensureFirstMasterIfEmpty, findActiveLocalAdmin } from '../services/adminLocalService.js'
 
 /**
- * Extracts a Bearer token from the Authorization header when present.
+ * Extrai token JWT do header Authorization Bearer ou dos cookies centrais do dass_auth.
  */
-function extractBearerToken(req) {
-  const header = req.headers.authorization || ''
-  if (!header.startsWith('Bearer ')) return null
-  return header.slice(7).trim() || null
+export function extractToken(req) {
+  const authHeader = req.headers.authorization || ''
+  if (authHeader.startsWith('Bearer ')) {
+    return authHeader.slice(7).trim() || null
+  }
+  return req.cookies?.token || req.cookies?.adminToken || null
 }
 
-/**
- * Validates any provided Bearer token without blocking anonymous requests.
- * Rejects malformed or expired tokens with 401 so clients clear stale sessions.
- */
-export function authenticateOptional(req, res, next) {
-  const token = extractBearerToken(req)
-  if (!token) {
-    req.user = null
-    return next()
+async function verifyWithDassAuth(token) {
+  if (env.jwtSecret) {
+    return jwt.verify(token, env.jwtSecret)
   }
 
-  try {
-    req.user = jwt.verify(token, env.jwtSecret)
-    return next()
-  } catch {
-    return res.status(401).json({
-      message: 'Sessão expirada ou token inválido. Faça login novamente.',
-    })
+  const res = await fetch(`${env.dassAuthUrl}/auth/me`, {
+    method: 'POST',
+    headers: {
+      Accept: 'application/json',
+      Cookie: `token=${token}`,
+    },
+  })
+
+  if (!res.ok) {
+    throw new Error('Token inválido no dass_auth')
+  }
+
+  const body = await res.json()
+  if (body?.userData) {
+    return JSON.parse(Buffer.from(body.userData, 'base64').toString('utf-8'))
+  }
+  return body?.data || body
+}
+
+export async function buildSessionUser(payload) {
+  await ensureFirstMasterIfEmpty(payload)
+  const localAdmin = await findActiveLocalAdmin(payload?.matricula, payload?.usuario)
+  const isGlobalAdmin = Boolean(payload?.is_admin)
+  const isLocalAdmin = Boolean(localAdmin)
+  const isMaster = Boolean(localAdmin?.isMaster)
+  const isAdmin = isGlobalAdmin || isLocalAdmin
+
+  return {
+    id: payload?.id ?? null,
+    matricula: payload?.matricula || payload?.usuario || '',
+    cracha: payload?.codbarras || payload?.matricula || payload?.usuario || '',
+    usuario: payload?.usuario || '',
+    nome: payload?.nome || payload?.usuario || 'Usuário',
+    setor: payload?.setor || null,
+    unidade: payload?.unidade || null,
+    perfil: isMaster ? 'Master' : isAdmin ? 'Admin' : 'Operador',
+    isMaster,
+    isAdmin,
+    isGlobalAdmin,
+    isLocalAdmin,
   }
 }
 
-/**
- * Requires an authenticated user on the request.
- */
-export function requireAuth(req, res, next) {
-  const token = extractBearerToken(req)
+export async function requireAuth(req, res, next) {
+  const token = extractToken(req)
   if (!token) {
     return res.status(401).json({
       message: 'Autenticação necessária para realizar esta operação.',
@@ -43,7 +70,8 @@ export function requireAuth(req, res, next) {
   }
 
   try {
-    req.user = jwt.verify(token, env.jwtSecret)
+    const payload = await verifyWithDassAuth(token)
+    req.user = await buildSessionUser(payload)
     return next()
   } catch {
     return res.status(401).json({
@@ -52,18 +80,12 @@ export function requireAuth(req, res, next) {
   }
 }
 
-/**
- * Requires an authenticated user with administrative privileges.
- */
 export function requireAdmin(req, res, next) {
   if (!req.user) {
-    return res.status(401).json({
-      message: 'Autenticação necessária.',
-    })
+    return res.status(401).json({ message: 'Autenticação necessária.' })
   }
 
-  const perfil = String(req.user.perfil || req.user.role || '').toLowerCase()
-  if (perfil === 'operador') {
+  if (!req.user.isAdmin && !req.user.isGlobalAdmin) {
     return res.status(403).json({
       message: 'Acesso restrito a administradores.',
     })

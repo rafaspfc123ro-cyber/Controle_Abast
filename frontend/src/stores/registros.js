@@ -1,235 +1,228 @@
 // src/stores/registros.js
 import { defineStore } from 'pinia'
-import { ref, computed, watch } from 'vue'
+import { ref, computed } from 'vue'
 import { api } from '../services/api'
 import { useAuthStore } from './auth'
 
-// Limpeza única dos dados padrões mockados anteriores para iniciar o app totalmente limpo
-if (
-  typeof window !== 'undefined' &&
-  localStorage.getItem('controlabast_limpar_padroes_v1') !== 'true'
-) {
-  localStorage.removeItem('controlabast_marcas')
-  localStorage.removeItem('controlabast_produtos')
-  localStorage.removeItem('controlabast_celulas')
-  localStorage.removeItem('controlabast_registros')
-  localStorage.removeItem('controlabast_registros_v2')
-  localStorage.removeItem('controlabast_senha_exclusao')
-  localStorage.setItem('controlabast_limpar_padroes_v1', 'true')
-}
-
-const MARCAS_PADRAO = []
-const CELULAS_PADRAO = []
-const PRODUTOS_PADRAO = []
-
-// Administrador Master padrão (conforme solicitado: 3014716 - Rafael Oliveira da Silva)
-const ADMINS_PADRAO = [
-  {
-    cracha: '3014716',
-    nome: 'Rafael Oliveira da Silva',
-    perfil: 'Master',
-    isMaster: true,
-    dataCadastro: '23/11/2026',
-  },
-]
-
 export const useRegistrosStore = defineStore('registros', () => {
   const authStore = useAuthStore()
-  // 1. Marcas cadastradas
-  const marcasSalvas = localStorage.getItem('controlabast_marcas')
-  const marcas = ref(marcasSalvas ? JSON.parse(marcasSalvas) : MARCAS_PADRAO)
 
-  watch(
-    marcas,
-    (novas) => {
-      localStorage.setItem('controlabast_marcas', JSON.stringify(novas))
-    },
-    { deep: true },
-  )
+  // 1. Marcas e Logos (persistidos no PostgreSQL via API)
+  const marcas = ref([])
+  const logosMarcas = ref({})
 
-  const adicionarMarca = (nome) => {
+  const fetchMarcas = async () => {
+    try {
+      const lista = await api.get('/cadastros/marcas')
+      const arr = Array.isArray(lista) ? lista : []
+      marcas.value = arr.map((m) => m.nome)
+      const mapaLogos = {}
+      arr.forEach((m) => {
+        if (m.logoDataUrl) {
+          mapaLogos[m.nome.toUpperCase()] = m.logoDataUrl
+        }
+      })
+      logosMarcas.value = mapaLogos
+      return { ok: true }
+    } catch (err) {
+      return { ok: false, msg: err?.message || 'Erro ao carregar marcas.' }
+    }
+  }
+
+  const adicionarMarca = async (nome, logoDataUrl = null) => {
     const nomeLimpo = (nome || '').trim().toUpperCase()
     if (!nomeLimpo) return { ok: false, msg: 'Nome da marca não pode ser vazio.' }
-    if (marcas.value.includes(nomeLimpo)) {
-      return { ok: false, msg: 'Esta marca já está cadastrada.' }
-    }
-    marcas.value.push(nomeLimpo)
-    return { ok: true, msg: 'Marca cadastrada com sucesso!' }
-  }
-
-  const removerMarca = (nome) => {
-    marcas.value = marcas.value.filter((m) => m !== nome)
-    if (logosMarcas.value[nome.toUpperCase()]) {
-      delete logosMarcas.value[nome.toUpperCase()]
-      localStorage.setItem('controlabast_logos_marcas', JSON.stringify(logosMarcas.value))
-    }
-    return { ok: true, msg: 'Marca removida com sucesso.' }
-  }
-
-  const importarMarcasEmLote = (listaNomes, substituir = false) => {
-    const existentes = substituir ? [] : [...marcas.value]
-    let adicionados = 0
-    let ignorados = 0
-
-    listaNomes.forEach((nome) => {
-      const limpo = (nome || '').trim().toUpperCase()
-      if (limpo) {
-        if (!existentes.includes(limpo)) {
-          existentes.push(limpo)
-          adicionados++
-        } else {
-          ignorados++
-        }
+    try {
+      const criada = await api.post('/cadastros/marcas', {
+        nome: nomeLimpo,
+        logoDataUrl,
+      })
+      if (!marcas.value.includes(criada.nome)) {
+        marcas.value.push(criada.nome)
       }
-    })
-
-    marcas.value = existentes
-    return { ok: true, adicionados, ignorados, total: marcas.value.length }
-  }
-
-  // Logos personalizadas das marcas (opcional, base64 ou URL)
-  const logosSalvas = localStorage.getItem('controlabast_logos_marcas')
-  const logosMarcas = ref(logosSalvas ? JSON.parse(logosSalvas) : {})
-
-  watch(
-    logosMarcas,
-    (novos) => {
-      localStorage.setItem('controlabast_logos_marcas', JSON.stringify(novos))
-    },
-    { deep: true },
-  )
-
-  const definirLogoMarca = (marca, urlOuBase64) => {
-    if (!marca) return
-    logosMarcas.value[marca.toUpperCase()] = urlOuBase64
-  }
-
-  const removerLogoMarca = (marca) => {
-    if (!marca) return
-    const chave = marca.toUpperCase()
-    if (logosMarcas.value[chave]) {
-      delete logosMarcas.value[chave]
-      localStorage.setItem('controlabast_logos_marcas', JSON.stringify(logosMarcas.value))
+      if (criada.logoDataUrl) {
+        logosMarcas.value[criada.nome.toUpperCase()] = criada.logoDataUrl
+      }
+      return { ok: true, msg: 'Marca cadastrada com sucesso!' }
+    } catch (err) {
+      return { ok: false, msg: err?.message || 'Erro ao cadastrar marca.' }
     }
   }
 
-  // 2. Produtos cadastrados (com nome e valor)
-  const produtosSalvos = localStorage.getItem('controlabast_produtos')
-  const produtos = ref(produtosSalvos ? JSON.parse(produtosSalvos) : PRODUTOS_PADRAO)
+  const removerMarca = async (nome) => {
+    try {
+      await api.delete(`/cadastros/marcas/${encodeURIComponent(nome)}`)
+      marcas.value = marcas.value.filter((m) => m !== nome)
+      delete logosMarcas.value[nome.toUpperCase()]
+      return { ok: true, msg: 'Marca removida com sucesso.' }
+    } catch (err) {
+      return { ok: false, msg: err?.message || 'Erro ao remover marca.' }
+    }
+  }
 
-  watch(
-    produtos,
-    (novos) => {
-      localStorage.setItem('controlabast_produtos', JSON.stringify(novos))
-    },
-    { deep: true },
-  )
+  const importarMarcasEmLote = async (listaNomes, substituir = false) => {
+    try {
+      const res = await api.post('/cadastros/marcas/importar', {
+        itens: listaNomes,
+        substituir,
+      })
+      await fetchMarcas()
+      return { ok: true, ...res }
+    } catch (err) {
+      return { ok: false, msg: err?.message || 'Erro ao importar marcas.' }
+    }
+  }
 
-  const adicionarProduto = ({ nome, valor }) => {
+  const definirLogoMarca = async (marca, urlOuBase64) => {
+    if (!marca) return { ok: false }
+    try {
+      await api.put(`/cadastros/marcas/${encodeURIComponent(marca)}/logo`, {
+        logoDataUrl: urlOuBase64,
+      })
+      logosMarcas.value[marca.toUpperCase()] = urlOuBase64
+      return { ok: true }
+    } catch (err) {
+      return { ok: false, msg: err?.message || 'Erro ao salvar logo.' }
+    }
+  }
+
+  const removerLogoMarca = async (marca) => {
+    if (!marca) return { ok: false }
+    try {
+      await api.put(`/cadastros/marcas/${encodeURIComponent(marca)}/logo`, {
+        logoDataUrl: null,
+      })
+      delete logosMarcas.value[marca.toUpperCase()]
+      return { ok: true }
+    } catch (err) {
+      return { ok: false, msg: err?.message || 'Erro ao remover logo.' }
+    }
+  }
+
+  // 2. Produtos cadastrados
+  const produtos = ref([])
+
+  const fetchProdutos = async () => {
+    try {
+      const lista = await api.get('/cadastros/produtos')
+      produtos.value = Array.isArray(lista) ? lista : []
+      return { ok: true }
+    } catch (err) {
+      return { ok: false, msg: err?.message || 'Erro ao carregar produtos.' }
+    }
+  }
+
+  const adicionarProduto = async ({ nome, valor }) => {
     const nomeLimpo = (nome || '').trim()
     const valorNum = Number(valor)
 
     if (!nomeLimpo) return { ok: false, msg: 'Nome do produto é obrigatório.' }
-    if (isNaN(valorNum) || valorNum < 0)
+    if (isNaN(valorNum) || valorNum < 0) {
       return { ok: false, msg: 'Informe um valor válido maior ou igual a zero.' }
-
-    const jaExiste = produtos.value.some((p) => p.nome.toLowerCase() === nomeLimpo.toLowerCase())
-    if (jaExiste) {
-      return { ok: false, msg: 'Já existe um produto com este nome.' }
     }
 
-    produtos.value.push({
-      id: Date.now(),
-      nome: nomeLimpo,
-      valor: valorNum,
-    })
-
-    return { ok: true, msg: 'Produto cadastrado com sucesso!' }
+    try {
+      const criado = await api.post('/cadastros/produtos', {
+        nome: nomeLimpo,
+        valor: valorNum,
+      })
+      produtos.value.push(criado)
+      return { ok: true, msg: 'Produto cadastrado com sucesso!' }
+    } catch (err) {
+      return { ok: false, msg: err?.message || 'Erro ao cadastrar produto.' }
+    }
   }
 
-  const removerProduto = (id) => {
-    produtos.value = produtos.value.filter((p) => p.id !== id)
-    return { ok: true, msg: 'Produto removido com sucesso.' }
+  const removerProduto = async (id) => {
+    try {
+      await api.delete(`/cadastros/produtos/${id}`)
+      produtos.value = produtos.value.filter((p) => p.id !== id)
+      return { ok: true, msg: 'Produto removido com sucesso.' }
+    } catch (err) {
+      return { ok: false, msg: err?.message || 'Erro ao remover produto.' }
+    }
   }
 
-  const importarProdutosEmLote = (listaProdutos, substituir = false) => {
-    const existentes = substituir ? [] : [...produtos.value]
-    let adicionados = 0
-    let ignorados = 0
-
-    listaProdutos.forEach((p) => {
-      const nomeLimpo = (p.nome || '').trim()
-      const valorNum = Number(p.valor || 0)
-      if (nomeLimpo) {
-        const jaExiste = existentes.some(
-          (item) => item.nome.toLowerCase() === nomeLimpo.toLowerCase(),
-        )
-        if (!jaExiste) {
-          existentes.push({
-            id: Date.now() + Math.random(),
-            nome: nomeLimpo,
-            valor: isNaN(valorNum) || valorNum < 0 ? 0 : valorNum,
-          })
-          adicionados++
-        } else {
-          ignorados++
-        }
-      }
-    })
-
-    produtos.value = existentes
-    return { ok: true, adicionados, ignorados, total: produtos.value.length }
+  const importarProdutosEmLote = async (listaProdutos, substituir = false) => {
+    try {
+      const res = await api.post('/cadastros/produtos/importar', {
+        itens: listaProdutos,
+        substituir,
+      })
+      await fetchProdutos()
+      return { ok: true, ...res }
+    } catch (err) {
+      return { ok: false, msg: err?.message || 'Erro ao importar produtos.' }
+    }
   }
 
   // 3. Células de Produção cadastradas
-  const celulasSalvas = localStorage.getItem('controlabast_celulas')
-  const celulas = ref(celulasSalvas ? JSON.parse(celulasSalvas) : CELULAS_PADRAO)
+  const celulas = ref([])
 
-  watch(
-    celulas,
-    (novas) => {
-      localStorage.setItem('controlabast_celulas', JSON.stringify(novas))
-    },
-    { deep: true },
-  )
+  const fetchCelulas = async () => {
+    try {
+      const lista = await api.get('/cadastros/celulas')
+      celulas.value = Array.isArray(lista) ? lista.map((c) => c.nome) : []
+      return { ok: true }
+    } catch (err) {
+      return { ok: false, msg: err?.message || 'Erro ao carregar células.' }
+    }
+  }
 
-  const adicionarCelula = (nome) => {
+  const adicionarCelula = async (nome) => {
     const nomeLimpo = (nome || '').trim().toUpperCase()
     if (!nomeLimpo) return { ok: false, msg: 'Nome da célula não pode ser vazio.' }
-    if (celulas.value.includes(nomeLimpo)) {
-      return { ok: false, msg: 'Esta célula já está cadastrada.' }
-    }
-    celulas.value.push(nomeLimpo)
-    return { ok: true, msg: 'Célula cadastrada com sucesso!' }
-  }
-
-  const removerCelula = (nome) => {
-    celulas.value = celulas.value.filter((c) => c !== nome)
-    return { ok: true, msg: 'Célula removida com sucesso.' }
-  }
-
-  const importarCelulasEmLote = (listaNomes, substituir = false) => {
-    const existentes = substituir ? [] : [...celulas.value]
-    let adicionados = 0
-    let ignorados = 0
-
-    listaNomes.forEach((nome) => {
-      const limpo = (nome || '').trim().toUpperCase()
-      if (limpo) {
-        if (!existentes.includes(limpo)) {
-          existentes.push(limpo)
-          adicionados++
-        } else {
-          ignorados++
-        }
+    try {
+      const criada = await api.post('/cadastros/celulas', { nome: nomeLimpo })
+      if (!celulas.value.includes(criada.nome)) {
+        celulas.value.push(criada.nome)
       }
-    })
-
-    celulas.value = existentes
-    return { ok: true, adicionados, ignorados, total: celulas.value.length }
+      return { ok: true, msg: 'Célula cadastrada com sucesso!' }
+    } catch (err) {
+      return { ok: false, msg: err?.message || 'Erro ao cadastrar célula.' }
+    }
   }
 
-  // 4. Registros de abastecimento e resíduo (conectado à API REST)
+  const removerCelula = async (nome) => {
+    try {
+      await api.delete(`/cadastros/celulas/${encodeURIComponent(nome)}`)
+      celulas.value = celulas.value.filter((c) => c !== nome)
+      return { ok: true, msg: 'Célula removida com sucesso.' }
+    } catch (err) {
+      return { ok: false, msg: err?.message || 'Erro ao remover célula.' }
+    }
+  }
+
+  const importarCelulasEmLote = async (listaNomes, substituir = false) => {
+    try {
+      const res = await api.post('/cadastros/celulas/importar', {
+        itens: listaNomes,
+        substituir,
+      })
+      await fetchCelulas()
+      return { ok: true, ...res }
+    } catch (err) {
+      return { ok: false, msg: err?.message || 'Erro ao importar células.' }
+    }
+  }
+
+  const fetchCadastros = async () => {
+    await Promise.all([fetchMarcas(), fetchProdutos(), fetchCelulas()])
+  }
+
+  // 4. Identificação de Operador via legado do dass_auth (matrícula / crachá / RFID)
+  const identificarOperador = async (codigo) => {
+    const limpo = String(codigo || '').trim()
+    if (!limpo) return { ok: false, msg: 'Informe matrícula, crachá ou RFID.' }
+    try {
+      const res = await api.get(`/colaboradores/identificar/${encodeURIComponent(limpo)}`)
+      return { ok: true, colaborador: res?.colaborador || null }
+    } catch (err) {
+      return { ok: false, msg: err?.message || 'Colaborador não encontrado.' }
+    }
+  }
+
+  // 5. Registros de abastecimento e resíduo (conectado à API REST)
   const registros = ref([])
   const loading = ref(false)
   const error = ref(null)
@@ -238,6 +231,7 @@ export const useRegistrosStore = defineStore('registros', () => {
     ...item,
     cracha:
       item.cracha ||
+      item.matricula ||
       (item.nome && item.nome.includes('Crachá')
         ? item.nome.replace('Crachá', '').trim()
         : item.nome || '—'),
@@ -265,15 +259,7 @@ export const useRegistrosStore = defineStore('registros', () => {
     try {
       const res = await api.post('/registros', dados)
       const criado = res?.registro || res?.data || res
-      const registroFinal = normalizarRegistro(
-        criado && typeof criado === 'object' && criado.id !== undefined
-          ? criado
-          : {
-              id: Date.now(),
-              ...dados,
-              ...(criado && typeof criado === 'object' ? criado : {}),
-            },
-      )
+      const registroFinal = normalizarRegistro(criado)
       registros.value.unshift(registroFinal)
       return { ok: true, data: registroFinal, msg: 'Lançamento registrado com sucesso!' }
     } catch (err) {
@@ -326,74 +312,54 @@ export const useRegistrosStore = defineStore('registros', () => {
     }
   }
 
-  // ----------------------------------------------------
-  // 5. Gestão de Administradores e Usuário Logado (integrado à authStore)
-  // ----------------------------------------------------
-  const adminsSalvos = localStorage.getItem('controlabast_admins')
-  const admins = ref(adminsSalvos ? JSON.parse(adminsSalvos) : ADMINS_PADRAO)
-
-  // Garante que o Master Rafael Oliveira da Silva (3014716) sempre esteja presente
-  if (!admins.value.some((a) => a.cracha === '3014716')) {
-    admins.value.unshift(ADMINS_PADRAO[0])
-  }
-
-  watch(
-    admins,
-    (novos) => {
-      localStorage.setItem('controlabast_admins', JSON.stringify(novos))
-    },
-    { deep: true },
-  )
+  // 6. Gestão de Administradores Locais (tabela controle_abast.admins_locais, sem admin padrão)
+  const admins = ref([])
 
   const usuarioAdminLogado = computed(() => authStore.usuario)
   const isAdmin = computed(() => authStore.isAdmin)
 
-  const loginAdmin = async (credenciais) => {
-    if (typeof credenciais === 'string') {
-      return authStore.login({ cracha: credenciais, senha: '' })
+  const fetchAdmins = async () => {
+    if (!authStore.isAdmin) {
+      admins.value = []
+      return { ok: false }
     }
-    return authStore.login(credenciais)
+    try {
+      const lista = await api.get('/admins')
+      admins.value = Array.isArray(lista) ? lista : []
+      return { ok: true, data: admins.value }
+    } catch (err) {
+      return { ok: false, msg: err?.message || 'Erro ao carregar administradores.' }
+    }
   }
 
-  const logoutAdmin = () => {
-    authStore.logout()
-  }
-
-  const adicionarAdmin = ({ cracha, nome }) => {
-    const crachaLimpo = (cracha || '').trim()
+  const adicionarAdmin = async ({ cracha, matricula, nome }) => {
+    const codigo = (matricula || cracha || '').trim()
     const nomeLimpo = (nome || '').trim()
 
-    if (!crachaLimpo) return { ok: false, msg: 'O número do crachá é obrigatório.' }
-    if (!nomeLimpo) return { ok: false, msg: 'O nome da pessoa é obrigatório.' }
+    if (!codigo) return { ok: false, msg: 'A matrícula ou crachá é obrigatório.' }
 
-    if (admins.value.some((a) => a.cracha === crachaLimpo)) {
-      return { ok: false, msg: 'Este crachá já possui permissão de administrador.' }
+    try {
+      const criado = await api.post('/admins', {
+        matricula: codigo,
+        nome: nomeLimpo,
+      })
+      admins.value.push(criado)
+      return { ok: true, msg: `${criado.nome} adicionado(a) com permissões de administrador!` }
+    } catch (err) {
+      return { ok: false, msg: err?.message || 'Erro ao adicionar administrador.' }
     }
-
-    admins.value.push({
-      cracha: crachaLimpo,
-      nome: nomeLimpo,
-      perfil: 'Administrador (Edição / Exclusão)',
-      isMaster: false,
-      dataCadastro: new Date().toLocaleDateString('pt-BR'),
-    })
-
-    return { ok: true, msg: `${nomeLimpo} adicionado(a) com permissões de editar e excluir!` }
   }
 
-  const removerAdmin = (cracha) => {
-    if (cracha === '3014716') {
-      return { ok: false, msg: 'O usuário Master principal não pode ser removido.' }
+  const removerAdmin = async (matricula) => {
+    try {
+      const res = await api.delete(`/admins/${encodeURIComponent(matricula)}`)
+      admins.value = admins.value.filter(
+        (a) => a.matricula !== matricula && a.cracha !== matricula,
+      )
+      return { ok: true, msg: res?.message || 'Permissão removida com sucesso.' }
+    } catch (err) {
+      return { ok: false, msg: err?.message || 'Erro ao remover administrador.' }
     }
-
-    const admin = admins.value.find((a) => a.cracha === cracha)
-    admins.value = admins.value.filter((a) => a.cracha !== cracha)
-
-    if (usuarioAdminLogado.value?.cracha === cracha) {
-      logoutAdmin()
-    }
-
-    return { ok: true, msg: `Permissão de ${admin?.nome || 'usuário'} removida com sucesso.` }
   }
 
   // Getters para totais
@@ -431,8 +397,7 @@ export const useRegistrosStore = defineStore('registros', () => {
     return registros.value.reduce((acc, curr) => acc + Number(curr.valorTotal || 0), 0)
   })
 
-  // 4. Sistema de Senha de Exclusão e Notificações Centrais
-  // Modal de Confirmação de Exclusão (sem exigência de senha)
+  // Modal de Confirmação de Exclusão e Notificações Centrais
   const modalExclusao = ref({
     aberto: false,
     titulo: 'Confirmar Exclusão',
@@ -441,7 +406,6 @@ export const useRegistrosStore = defineStore('registros', () => {
     onConfirm: null,
   })
 
-  // Estado da Notificação no Meio da Tela
   const notificacaoCentro = ref({
     aberto: false,
     tipo: 'sucesso',
@@ -523,13 +487,11 @@ export const useRegistrosStore = defineStore('registros', () => {
     return { ok: true }
   }
 
-  // ----------------------------------------------------
-  // 6. Backup Completo e Restauração de Dados (JSON)
-  // ----------------------------------------------------
+  // Backup Completo (Exportação JSON)
   const exportarBackupCompleto = () => {
     const dadosBackup = {
       sistema: 'ControlAbast',
-      versao: '1.0',
+      versao: '1.1',
       dataExportacao: new Date().toISOString(),
       marcas: marcas.value,
       logosMarcas: logosMarcas.value,
@@ -554,56 +516,53 @@ export const useRegistrosStore = defineStore('registros', () => {
     return { ok: true, msg: 'Backup exportado com sucesso!' }
   }
 
-  const importarBackupCompleto = (dadosBackup) => {
+  const importarBackupCompleto = async (dadosBackup) => {
     if (!dadosBackup || typeof dadosBackup !== 'object') {
       return { ok: false, msg: 'Arquivo de backup inválido ou formato corrompido.' }
     }
 
     if (Array.isArray(dadosBackup.marcas)) {
-      marcas.value = [...dadosBackup.marcas]
+      await importarMarcasEmLote(dadosBackup.marcas, false)
     }
     if (dadosBackup.logosMarcas && typeof dadosBackup.logosMarcas === 'object') {
-      logosMarcas.value = { ...dadosBackup.logosMarcas }
+      for (const [m, logo] of Object.entries(dadosBackup.logosMarcas)) {
+        await definirLogoMarca(m, logo)
+      }
     }
     if (Array.isArray(dadosBackup.produtos)) {
-      produtos.value = [...dadosBackup.produtos]
+      await importarProdutosEmLote(dadosBackup.produtos, false)
     }
     if (Array.isArray(dadosBackup.celulas)) {
-      celulas.value = [...dadosBackup.celulas]
-    }
-    if (Array.isArray(dadosBackup.registros)) {
-      registros.value = [...dadosBackup.registros]
-    }
-    if (Array.isArray(dadosBackup.admins)) {
-      const novosAdmins = [...dadosBackup.admins]
-      if (!novosAdmins.some((a) => a.cracha === '3014716')) {
-        novosAdmins.unshift(ADMINS_PADRAO[0])
-      }
-      admins.value = novosAdmins
+      await importarCelulasEmLote(dadosBackup.celulas, false)
     }
 
     return {
       ok: true,
-      msg: `Backup restaurado com sucesso! (${marcas.value.length} marcas, ${produtos.value.length} produtos, ${celulas.value.length} células e ${registros.value.length} lançamentos recuperados)`,
+      msg: `Cadastros restaurados com sucesso! (${marcas.value.length} marcas, ${produtos.value.length} produtos e ${celulas.value.length} células)`,
     }
   }
 
   return {
     marcas,
     logosMarcas,
+    fetchMarcas,
     definirLogoMarca,
     removerLogoMarca,
     adicionarMarca,
     removerMarca,
     importarMarcasEmLote,
     produtos,
+    fetchProdutos,
     adicionarProduto,
     removerProduto,
     importarProdutosEmLote,
     celulas,
+    fetchCelulas,
     adicionarCelula,
     removerCelula,
     importarCelulasEmLote,
+    fetchCadastros,
+    identificarOperador,
     registros,
     loading,
     error,
@@ -613,10 +572,9 @@ export const useRegistrosStore = defineStore('registros', () => {
     excluirRegistro,
     removerRegistro: excluirRegistro,
     admins,
+    fetchAdmins,
     usuarioAdminLogado,
     isAdmin,
-    loginAdmin,
-    logoutAdmin,
     adicionarAdmin,
     removerAdmin,
     totalAbastecido,

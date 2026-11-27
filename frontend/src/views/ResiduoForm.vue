@@ -405,14 +405,16 @@ const confirmarCrachaESalvar = async () => {
             <!-- Formulário de Leitura / Digitação do Crachá -->
             <form @submit.prevent="confirmarCrachaESalvar" class="cracha-form">
               <div class="input-group">
-                <label class="label-cracha"><IdCard :size="16" /> Crachá do Operador *</label>
+                <label class="label-cracha"
+                  ><IdCard :size="16" /> Matrícula / Crachá / RFID *</label
+                >
                 <input
                   ref="inputCrachaRef"
                   type="text"
                   v-model="crachaTemp"
                   class="modern-input input-cracha-destaque"
                   :class="{ 'input-filled': isCampoPreenchido(crachaTemp) }"
-                  placeholder="Digite ou aproxime o crachá..."
+                  placeholder="Digite a matrícula ou aproxime crachá/RFID..."
                   required
                   autofocus
                 />

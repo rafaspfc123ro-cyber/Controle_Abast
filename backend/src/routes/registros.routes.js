@@ -1,8 +1,27 @@
 import { Router } from 'express'
-import { authenticateOptional, requireAdmin, requireAuth } from '../middlewares/auth.js'
-import { getRegistros, saveRegistros } from '../services/storage.js'
+import { AppDataSource } from '../database/data-source.js'
+import { RegistroEntity } from '../database/entities/RegistroEntity.js'
+import { requireAdmin, requireAuth } from '../middlewares/auth.js'
+import { identificarColaborador } from '../services/colaboradorService.js'
 
 const router = Router()
+
+function formatRegistro(entity) {
+  return {
+    id: entity.id,
+    tipo: entity.tipo,
+    dataHora: entity.dataHora,
+    cracha: entity.cracha,
+    matricula: entity.matricula || entity.cracha,
+    nome: entity.nome,
+    marca: entity.marca,
+    celula: entity.celula,
+    produto: entity.produto,
+    qtd: Number(entity.qtd),
+    valorUnitario: Number(entity.valorUnitario),
+    valorTotal: Number(entity.valorTotal),
+  }
+}
 
 function buildRegistroPayload(body, existing = {}) {
   const cracha = String(body.cracha ?? existing.cracha ?? '').trim()
@@ -10,7 +29,9 @@ function buildRegistroPayload(body, existing = {}) {
     .trim()
     .toUpperCase()
   const produto = String(body.produto ?? existing.produto ?? '').trim()
-  const marca = String(body.marca ?? existing.marca ?? '').trim()
+  const marca = String(body.marca ?? existing.marca ?? '')
+    .trim()
+    .toUpperCase()
   const tipo = String(body.tipo ?? existing.tipo ?? '').trim()
   const dataHora = String(body.dataHora ?? existing.dataHora ?? '').trim()
   const qtd = Number(body.qtd ?? existing.qtd ?? 0)
@@ -18,11 +39,13 @@ function buildRegistroPayload(body, existing = {}) {
   const valorTotal = Number(body.valorTotal ?? existing.valorTotal ?? 0)
   const nome =
     String(body.nome ?? existing.nome ?? '').trim() || (cracha ? `Crachá ${cracha}` : '')
+  const matricula = String(body.matricula ?? existing.matricula ?? '').trim() || null
 
   return {
     tipo,
     dataHora,
     cracha,
+    matricula,
     nome,
     marca,
     celula,
@@ -37,47 +60,44 @@ function validateRegistro(payload) {
   if (!['Abastecimento', 'Resíduo'].includes(payload.tipo)) {
     return 'Campo "tipo" deve ser "Abastecimento" ou "Resíduo".'
   }
-  if (!payload.dataHora) {
-    return 'Campo "dataHora" é obrigatório.'
-  }
-  if (!payload.celula) {
-    return 'Campo "celula" é obrigatório.'
-  }
-  if (!payload.produto) {
-    return 'Campo "produto" é obrigatório.'
-  }
-  if (!payload.cracha) {
-    return 'Campo "cracha" é obrigatório.'
-  }
+  if (!payload.dataHora) return 'Campo "dataHora" é obrigatório.'
+  if (!payload.celula) return 'Campo "celula" é obrigatório.'
+  if (!payload.produto) return 'Campo "produto" é obrigatório.'
+  if (!payload.cracha) return 'Campo "cracha" é obrigatório.'
   if (!Number.isFinite(payload.qtd) || payload.qtd <= 0) {
     return 'Campo "qtd" deve ser um número maior que zero.'
   }
   return null
 }
 
-router.get('/', authenticateOptional, async (req, res, next) => {
+router.get('/', async (req, res, next) => {
   try {
-    const registros = await getRegistros()
+    const repo = AppDataSource.getRepository(RegistroEntity)
+    const qb = repo.createQueryBuilder('r').orderBy('r.id', 'DESC')
+
     const { tipo, marca, celula, cracha, produto } = req.query
+    if (tipo) qb.andWhere('LOWER(r.tipo) = LOWER(:tipo)', { tipo: String(tipo) })
+    if (marca) qb.andWhere('LOWER(r.marca) = LOWER(:marca)', { marca: String(marca) })
+    if (celula) qb.andWhere('LOWER(r.celula) = LOWER(:celula)', { celula: String(celula) })
+    if (cracha) {
+      qb.andWhere('(TRIM(r.cracha) = :cracha OR TRIM(r.matricula) = :cracha)', {
+        cracha: String(cracha).trim(),
+      })
+    }
+    if (produto) {
+      qb.andWhere('LOWER(r.produto) LIKE LOWER(:produto)', {
+        produto: `%${String(produto)}%`,
+      })
+    }
 
-    const filtrados = registros.filter((item) => {
-      if (tipo && String(item.tipo).toLowerCase() !== String(tipo).toLowerCase()) return false
-      if (marca && String(item.marca).toLowerCase() !== String(marca).toLowerCase()) return false
-      if (celula && String(item.celula).toLowerCase() !== String(celula).toLowerCase()) return false
-      if (cracha && String(item.cracha).trim() !== String(cracha).trim()) return false
-      if (produto && !String(item.produto).toLowerCase().includes(String(produto).toLowerCase())) {
-        return false
-      }
-      return true
-    })
-
-    return res.status(200).json(filtrados)
+    const rows = await qb.getMany()
+    return res.status(200).json(rows.map(formatRegistro))
   } catch (err) {
     return next(err)
   }
 })
 
-router.post('/', authenticateOptional, async (req, res, next) => {
+router.post('/', async (req, res, next) => {
   try {
     const payload = buildRegistroPayload(req.body || {})
     const validationError = validateRegistro(payload)
@@ -85,21 +105,22 @@ router.post('/', authenticateOptional, async (req, res, next) => {
       return res.status(400).json({ message: validationError })
     }
 
-    const registros = await getRegistros()
-    const maxId = registros.reduce((max, item) => {
-      const num = Number(item.id)
-      return Number.isFinite(num) && num > max ? num : max
-    }, 0)
-
-    const novoRegistro = {
-      id: maxId + 1,
-      ...payload,
+    // Identifica o operador no schema legado `colaborador` (matrícula / crachá / RFID)
+    const colab = await identificarColaborador(payload.cracha)
+    if (colab) {
+      payload.matricula = colab.matricula || payload.matricula || payload.cracha
+      if (colab.nome) {
+        payload.nome = colab.nome
+      }
+    } else if (!payload.matricula) {
+      payload.matricula = payload.cracha
     }
 
-    registros.unshift(novoRegistro)
-    await saveRegistros(registros)
+    const repo = AppDataSource.getRepository(RegistroEntity)
+    const created = repo.create(payload)
+    const saved = await repo.save(created)
 
-    return res.status(201).json(novoRegistro)
+    return res.status(201).json(formatRegistro(saved))
   } catch (err) {
     return next(err)
   }
@@ -107,29 +128,35 @@ router.post('/', authenticateOptional, async (req, res, next) => {
 
 router.put('/:id', requireAuth, requireAdmin, async (req, res, next) => {
   try {
-    const { id } = req.params
-    const registros = await getRegistros()
-    const index = registros.findIndex((item) => String(item.id) === String(id))
+    const id = Number(req.params.id)
+    if (!Number.isInteger(id)) {
+      return res.status(400).json({ message: 'ID inválido.' })
+    }
 
-    if (index === -1) {
+    const repo = AppDataSource.getRepository(RegistroEntity)
+    const existing = await repo.findOne({ where: { id } })
+    if (!existing) {
       return res.status(404).json({ message: 'Registro não encontrado.' })
     }
 
-    const atualizadoPayload = buildRegistroPayload(req.body || {}, registros[index])
-    const validationError = validateRegistro(atualizadoPayload)
+    const updatedPayload = buildRegistroPayload(req.body || {}, existing)
+    const validationError = validateRegistro(updatedPayload)
     if (validationError) {
       return res.status(400).json({ message: validationError })
     }
 
-    const registroAtualizado = {
-      ...registros[index],
-      ...atualizadoPayload,
+    if (req.body?.cracha && req.body.cracha !== existing.cracha) {
+      const colab = await identificarColaborador(updatedPayload.cracha)
+      if (colab) {
+        updatedPayload.matricula = colab.matricula || updatedPayload.cracha
+        if (colab.nome) updatedPayload.nome = colab.nome
+      }
     }
 
-    registros[index] = registroAtualizado
-    await saveRegistros(registros)
+    repo.merge(existing, updatedPayload)
+    const saved = await repo.save(existing)
 
-    return res.status(200).json(registroAtualizado)
+    return res.status(200).json(formatRegistro(saved))
   } catch (err) {
     return next(err)
   }
@@ -137,17 +164,18 @@ router.put('/:id', requireAuth, requireAdmin, async (req, res, next) => {
 
 router.delete('/:id', requireAuth, requireAdmin, async (req, res, next) => {
   try {
-    const { id } = req.params
-    const registros = await getRegistros()
-    const index = registros.findIndex((item) => String(item.id) === String(id))
+    const id = Number(req.params.id)
+    if (!Number.isInteger(id)) {
+      return res.status(400).json({ message: 'ID inválido.' })
+    }
 
-    if (index === -1) {
+    const repo = AppDataSource.getRepository(RegistroEntity)
+    const existing = await repo.findOne({ where: { id } })
+    if (!existing) {
       return res.status(404).json({ message: 'Registro não encontrado.' })
     }
 
-    registros.splice(index, 1)
-    await saveRegistros(registros)
-
+    await repo.remove(existing)
     return res.status(200).json({ message: 'Lançamento excluído com sucesso.' })
   } catch (err) {
     return next(err)
